@@ -99,6 +99,4 @@ api/
 
 详见 [AUTHENTICATION_GUIDE.md](AUTHENTICATION_GUIDE.md)
 
-## 许可证
 
-GPLv3
