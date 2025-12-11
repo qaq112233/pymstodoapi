@@ -2,12 +2,12 @@ version: '3.8'
 
 services:
   mstodo-api:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: registry-vpc.cn-shanghai.aliyuncs.com/dockerad1z/pymstodoapi:v1
     container_name: mstodo-api-gateway
     ports:
       - "${PORT:-8000}:8000"
+    env_file:
+      - .env
     environment:
       # Microsoft OAuth Configuration
       - CLIENT_ID=${CLIENT_ID}
@@ -27,8 +27,8 @@ services:
     volumes:
       # Persist token cache across container restarts
       - token_cache:/app/token_cache
-      # Optional: Mount config for development
-      # - ./.env:/app/.env:ro
+      # Mount .env file for application to read
+      - ./.env:/app/.env:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
@@ -38,8 +38,6 @@ services:
       start_period: 10s
     # Security: Run as non-root user (defined in Dockerfile)
     user: appuser
-    # Optional: Limit resources
-
 
 volumes:
   token_cache:

@@ -53,6 +53,7 @@ app = FastAPI(
     lifespan=lifespan,
     docs_url=f"{settings.api_prefix}/docs" if settings.api_prefix else "/docs",
     redoc_url=f"{settings.api_prefix}/redoc" if settings.api_prefix else "/redoc",
+    root_path=settings.api_prefix if settings.api_prefix else "",
 )
 
 
