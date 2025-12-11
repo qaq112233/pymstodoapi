@@ -4,6 +4,7 @@ RESTful API service for Microsoft To Do using pymstodo library
 """
 from fastapi import FastAPI, Depends, HTTPException, Header, Request
 from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
 from typing import Optional
@@ -45,15 +46,15 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down MS To Do API Gateway...")
 
 
-# Create FastAPI app
+# Create FastAPI app with prefix support
 app = FastAPI(
     title="MS To Do API Gateway",
     description="RESTful API service for Microsoft To Do using pymstodo library",
     version="1.0.0",
     lifespan=lifespan,
-    docs_url=f"{settings.api_prefix}/docs" if settings.api_prefix else "/docs",
-    redoc_url=f"{settings.api_prefix}/redoc" if settings.api_prefix else "/redoc",
-    root_path=settings.api_prefix if settings.api_prefix else "",
+    docs_url=None,  # Disable default docs
+    redoc_url=None,  # Disable default redoc
+    openapi_url=None,  # Disable default openapi
 )
 
 
@@ -67,6 +68,36 @@ async def global_exception_handler(request: Request, exc: Exception):
             "error": "Internal Server Error",
             "message": str(exc)
         }
+    )
+
+
+# Custom OpenAPI and Docs endpoints with prefix support
+@app.get(f"{settings.api_prefix}/openapi.json" if settings.api_prefix else "/openapi.json", include_in_schema=False)
+async def get_openapi():
+    from fastapi.openapi.utils import get_openapi
+    return get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+
+
+@app.get(f"{settings.api_prefix}/docs" if settings.api_prefix else "/docs", include_in_schema=False)
+async def custom_swagger_ui_html():
+    from fastapi.openapi.docs import get_swagger_ui_html
+    return get_swagger_ui_html(
+        openapi_url=f"{settings.api_prefix}/openapi.json" if settings.api_prefix else "/openapi.json",
+        title=f"{app.title} - Swagger UI",
+    )
+
+
+@app.get(f"{settings.api_prefix}/redoc" if settings.api_prefix else "/redoc", include_in_schema=False)
+async def custom_redoc_html():
+    from fastapi.openapi.docs import get_redoc_html
+    return get_redoc_html(
+        openapi_url=f"{settings.api_prefix}/openapi.json" if settings.api_prefix else "/openapi.json",
+        title=f"{app.title} - ReDoc",
     )
 
 
