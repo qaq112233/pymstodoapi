@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  mstodo-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mstodo-api-gateway
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      # Microsoft OAuth Configuration
+      - CLIENT_ID=${CLIENT_ID}
+      - CLIENT_SECRET=${CLIENT_SECRET}
+      
+      # API Configuration
+      - API_PREFIX=${API_PREFIX:-}
+      - ENABLE_API_KEY=${ENABLE_API_KEY:-false}
+      - X_API_KEY=${X_API_KEY:-}
+      
+      # Token Management
+      - TOKEN_CACHE_PATH=/app/token_cache
+      
+      # Server Configuration
+      - HOST=0.0.0.0
+      - PORT=8000
+    volumes:
+      # Persist token cache across container restarts
+      - token_cache:/app/token_cache
+      # Optional: Mount config for development
+      # - ./.env:/app/.env:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    # Security: Run as non-root user (defined in Dockerfile)
+    user: appuser
+    # Optional: Limit resources
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+volumes:
+  token_cache:
+    driver: local

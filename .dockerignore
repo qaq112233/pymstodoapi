@@ -1,0 +1,36 @@
+# Token cache
+token_cache/
+
+# Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+.venv
+venv/
+ENV/
+env/
+
+# Documentation and metadata
+*.md
+LICENSE
+VERSION
+
+# Development
+.git
+.gitignore
+Dockerfile
+docker-compose.yml
+.DS_Store
+*.log
+.vscode
+.idea
