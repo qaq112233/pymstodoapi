@@ -60,16 +60,17 @@ async def callback_simple(
     Returns:
         Success HTML page or error page
     """
+    # Construct URLs with API prefix (used in both success and error cases)
+    api_prefix = settings.api_prefix if settings.api_prefix else ""
+    lists_url = f"{api_prefix}/lists"
+    docs_url = f"{api_prefix}/docs"
+    login_url = f"{api_prefix}/auth/login"
+    
     try:
         # Exchange code for token
         token = auth_manager.exchange_code_for_token(url)
         
         logger.info("Authentication successful")
-        
-        # Construct URLs with API prefix
-        api_prefix = settings.api_prefix if settings.api_prefix else ""
-        lists_url = f"{api_prefix}/lists"
-        docs_url = f"{api_prefix}/docs"
         
         # Return a nice HTML page
         html_content = f"""
@@ -153,9 +154,6 @@ async def callback_simple(
         
     except Exception as e:
         logger.error(f"Authentication failed: {e}")
-        # Construct URLs with API prefix
-        api_prefix = settings.api_prefix if settings.api_prefix else ""
-        login_url = f"{api_prefix}/auth/login"
         
         error_html = f"""
         <!DOCTYPE html>
