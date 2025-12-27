@@ -8,6 +8,7 @@ import logging
 from ..models import LoginResponse, TokenResponse
 from ..dependencies import get_auth_manager
 from ..auth import AuthManager
+from ..config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -65,93 +66,17 @@ async def callback_simple(
         
         logger.info("Authentication successful")
         
+        # Construct URLs with API prefix
+        api_prefix = settings.api_prefix if settings.api_prefix else ""
+        lists_url = f"{api_prefix}/lists"
+        docs_url = f"{api_prefix}/docs"
+        
         # Return a nice HTML page
-        html_content = """
+        html_content = f"""
         <!DOCTYPE html>
         <html>
         <head>
             <title>认证成功</title>
-            <meta charset="utf-8">
-            <style>
-                body {
-                    font-family: Arial, sans-serif;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    min-height: 100vh;
-                    margin: 0;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                }
-                .container {
-                    background: white;
-                    padding: 40px;
-                    border-radius: 10px;
-                    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-                    text-align: center;
-                    max-width: 500px;
-                }
-                .success-icon {
-                    font-size: 64px;
-                    color: #4CAF50;
-                    margin-bottom: 20px;
-                }
-                h1 {
-                    color: #333;
-                    margin-bottom: 10px;
-                }
-                p {
-                    color: #666;
-                    line-height: 1.6;
-                    margin: 10px 0;
-                }
-                .button {
-                    display: inline-block;
-                    margin-top: 20px;
-                    padding: 12px 30px;
-                    background: #667eea;
-                    color: white;
-                    text-decoration: none;
-                    border-radius: 5px;
-                    transition: background 0.3s;
-                }
-                .button:hover {
-                    background: #5568d3;
-                }
-                .code {
-                    background: #f5f5f5;
-                    padding: 10px;
-                    border-radius: 5px;
-                    margin: 15px 0;
-                    font-family: monospace;
-                    color: #333;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="success-icon">✓</div>
-                <h1>认证成功！</h1>
-                <p>您已成功连接到 Microsoft To Do API</p>
-                <p>现在可以开始使用 API 管理您的任务了</p>
-                <div class="code">
-                    <strong>测试 API：</strong><br>
-                    curl http://localhost:8000/lists
-                </div>
-                <a href="/docs" class="button">查看 API 文档</a>
-            </div>
-        </body>
-        </html>
-        """
-        from fastapi.responses import HTMLResponse
-        return HTMLResponse(content=html_content)
-        
-    except Exception as e:
-        logger.error(f"Authentication failed: {e}")
-        error_html = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>认证失败</title>
             <meta charset="utf-8">
             <style>
                 body {{
@@ -171,9 +96,9 @@ async def callback_simple(
                     text-align: center;
                     max-width: 500px;
                 }}
-                .error-icon {{
+                .success-icon {{
                     font-size: 64px;
-                    color: #f44336;
+                    color: #4CAF50;
                     margin-bottom: 20px;
                 }}
                 h1 {{
@@ -185,14 +110,6 @@ async def callback_simple(
                     line-height: 1.6;
                     margin: 10px 0;
                 }}
-                .error-detail {{
-                    background: #ffebee;
-                    padding: 15px;
-                    border-radius: 5px;
-                    margin: 20px 0;
-                    color: #c62828;
-                    word-break: break-word;
-                }}
                 .button {{
                     display: inline-block;
                     margin-top: 20px;
@@ -201,7 +118,100 @@ async def callback_simple(
                     color: white;
                     text-decoration: none;
                     border-radius: 5px;
+                    transition: background 0.3s;
                 }}
+                .button:hover {{
+                    background: #5568d3;
+                }}
+                .code {{
+                    background: #f5f5f5;
+                    padding: 10px;
+                    border-radius: 5px;
+                    margin: 15px 0;
+                    font-family: monospace;
+                    color: #333;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="success-icon">✓</div>
+                <h1>认证成功！</h1>
+                <p>您已成功连接到 Microsoft To Do API</p>
+                <p>现在可以开始使用 API 管理您的任务了</p>
+                <div class="code">
+                    <strong>测试 API：</strong><br>
+                    curl http://localhost:8000{lists_url}
+                </div>
+                <a href="{docs_url}" class="button">查看 API 文档</a>
+            </div>
+        </body>
+        </html>
+        """
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse(content=html_content)
+        
+    except Exception as e:
+        logger.error(f"Authentication failed: {e}")
+        # Construct URLs with API prefix
+        api_prefix = settings.api_prefix if settings.api_prefix else ""
+        login_url = f"{api_prefix}/auth/login"
+        
+        error_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>认证失败</title>
+            <meta charset="utf-8">
+            <style>
+                body {{{{
+                    font-family: Arial, sans-serif;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    min-height: 100vh;
+                    margin: 0;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                }}}}
+                .container {{{{
+                    background: white;
+                    padding: 40px;
+                    border-radius: 10px;
+                    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+                    text-align: center;
+                    max-width: 500px;
+                }}}}
+                .error-icon {{{{
+                    font-size: 64px;
+                    color: #f44336;
+                    margin-bottom: 20px;
+                }}}}
+                h1 {{{{
+                    color: #333;
+                    margin-bottom: 10px;
+                }}}}
+                p {{{{
+                    color: #666;
+                    line-height: 1.6;
+                    margin: 10px 0;
+                }}}}
+                .error-detail {{{{
+                    background: #ffebee;
+                    padding: 15px;
+                    border-radius: 5px;
+                    margin: 20px 0;
+                    color: #c62828;
+                    word-break: break-word;
+                }}}}
+                .button {{{{
+                    display: inline-block;
+                    margin-top: 20px;
+                    padding: 12px 30px;
+                    background: #667eea;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 5px;
+                }}}}
             </style>
         </head>
         <body>
@@ -212,7 +222,7 @@ async def callback_simple(
                 <div class="error-detail">
                     {str(e)}
                 </div>
-                <a href="/auth/login" class="button">重新认证</a>
+                <a href="{login_url}" class="button">重新认证</a>
             </div>
         </body>
         </html>
@@ -296,41 +306,7 @@ async def callback_post(
         )
 
 
-@router.get("/callback-simple")
-async def callback_simple(
-    url: str = Query(..., description="完整的重定向 URL"),
-    auth_manager: AuthManager = Depends(get_auth_manager)
-):
-    """
-    OAuth callback endpoint - 方式3：简化版（推荐）
-    
-    使用方法：
-    http://localhost:8000/auth/callback-simple?url=<完整的重定向URL>
-    
-    示例：
-    http://localhost:8000/auth/callback-simple?url=https://localhost/login/authorized?code=xxx&state=yyy
-    
-    Args:
-        url: Microsoft 重定向后的完整 URL
-        
-    Returns:
-        Success message
-    """
-    try:
-        # Exchange code for token
-        token = auth_manager.exchange_code_for_token(url)
-        
-        logger.info("Authentication successful")
-        return TokenResponse(
-            message="Authentication successful! You can now use the API.",
-            authenticated=True
-        )
-    except Exception as e:
-        logger.error(f"Authentication failed: {e}")
-        raise HTTPException(
-            status_code=400,
-            detail=f"Authentication failed: {str(e)}"
-        )
+
 
 
 @router.post("/logout", response_model=TokenResponse)
