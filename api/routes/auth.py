@@ -164,7 +164,7 @@ async def callback_simple(
             <title>认证失败</title>
             <meta charset="utf-8">
             <style>
-                body {{{{
+                body {{
                     font-family: Arial, sans-serif;
                     display: flex;
                     justify-content: center;
@@ -172,38 +172,38 @@ async def callback_simple(
                     min-height: 100vh;
                     margin: 0;
                     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                }}}}
-                .container {{{{
+                }}
+                .container {{
                     background: white;
                     padding: 40px;
                     border-radius: 10px;
                     box-shadow: 0 10px 40px rgba(0,0,0,0.1);
                     text-align: center;
                     max-width: 500px;
-                }}}}
-                .error-icon {{{{
+                }}
+                .error-icon {{
                     font-size: 64px;
                     color: #f44336;
                     margin-bottom: 20px;
-                }}}}
-                h1 {{{{
+                }}
+                h1 {{
                     color: #333;
                     margin-bottom: 10px;
-                }}}}
-                p {{{{
+                }}
+                p {{
                     color: #666;
                     line-height: 1.6;
                     margin: 10px 0;
-                }}}}
-                .error-detail {{{{
+                }}
+                .error-detail {{
                     background: #ffebee;
                     padding: 15px;
                     border-radius: 5px;
                     margin: 20px 0;
                     color: #c62828;
                     word-break: break-word;
-                }}}}
-                .button {{{{
+                }}
+                .button {{
                     display: inline-block;
                     margin-top: 20px;
                     padding: 12px 30px;
@@ -211,7 +211,7 @@ async def callback_simple(
                     color: white;
                     text-decoration: none;
                     border-radius: 5px;
-                }}}}
+                }}
             </style>
         </head>
         <body>
