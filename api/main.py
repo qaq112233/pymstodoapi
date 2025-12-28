@@ -11,7 +11,7 @@ from typing import Optional
 
 from .config import settings
 from .auth import AuthManager
-from .routes import auth_router, lists_router, tasks_router
+from .routes import auth_router, lists_router, tasks_router, html_router
 from .dependencies import verify_api_key, get_todo_client
 from .models import ErrorResponse
 
@@ -150,6 +150,13 @@ app.include_router(
     prefix=f"{settings.api_prefix}/tasks" if settings.api_prefix else "/tasks",
     tags=["Tasks"],
     dependencies=[Depends(verify_api_key)] if settings.enable_api_key else []
+)
+
+app.include_router(
+    html_router,
+    prefix=f"{settings.api_prefix}/html" if settings.api_prefix else "/html",
+    tags=["HTML Rendering"]
+    # Note: No API key protection for HTML routes, uses query-based auth instead
 )
 
 
