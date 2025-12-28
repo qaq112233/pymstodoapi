@@ -2,7 +2,7 @@
 Pydantic models for request/response validation
 """
 from pydantic import BaseModel, Field
-from typing import Optional, Literal
+from typing import Optional, Literal, List
 from datetime import datetime
 
 
@@ -55,7 +55,7 @@ class TaskListResponse(BaseModel):
 
 class PaginatedTaskListResponse(BaseModel):
     """Paginated task list response"""
-    value: list[TaskListResponse]
+    value: List[TaskListResponse]
     nextLink: Optional[str] = Field(None, description="URL to fetch next page of results")
     count: int = Field(description="Total number of items in current page")
 
@@ -81,7 +81,7 @@ class TaskCreate(BaseModel):
     reminderDateTime: Optional[str] = Field(None, description="Reminder date in ISO 8601 format")
     importance: Optional[Literal['low', 'normal', 'high']] = Field('normal', description="Task importance")
     isReminderOn: Optional[bool] = Field(False, description="Enable reminder")
-    categories: Optional[list[str]] = Field(None, description="Task categories")
+    categories: Optional[List[str]] = Field(None, description="Task categories")
 
 
 class TaskUpdate(BaseModel):
@@ -95,7 +95,7 @@ class TaskUpdate(BaseModel):
     isReminderOn: Optional[bool] = Field(None, description="Enable reminder")
     dueDateTime: Optional[str] = Field(None, description="Due date in ISO 8601 format")
     reminderDateTime: Optional[str] = Field(None, description="Reminder date in ISO 8601 format")
-    categories: Optional[list[str]] = Field(None, description="Task categories")
+    categories: Optional[List[str]] = Field(None, description="Task categories")
 
 
 class TaskResponse(BaseModel):
@@ -113,7 +113,7 @@ class TaskResponse(BaseModel):
     startDateTime: Optional[dict] = None
     isReminderOn: bool
     hasAttachments: bool
-    categories: Optional[list[str]] = None
+    categories: Optional[List[str]] = None
 
 
 class TaskStatusUpdate(BaseModel):
@@ -123,6 +123,6 @@ class TaskStatusUpdate(BaseModel):
 
 class PaginatedTaskResponse(BaseModel):
     """Paginated task response"""
-    value: list[TaskResponse]
+    value: List[TaskResponse]
     nextLink: Optional[str] = Field(None, description="URL to fetch next page of results")
     count: int = Field(description="Total number of items in current page")

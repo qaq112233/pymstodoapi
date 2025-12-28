@@ -11,6 +11,9 @@ Comprehensive test script to verify all fixes:
 import os
 import sys
 
+# Constants
+OAUTHLIB_VARS = ['OAUTHLIB_INSECURE_TRANSPORT', 'OAUTHLIB_RELAX_TOKEN_SCOPE', 'OAUTHLIB_IGNORE_SCOPE_CHANGE']
+
 
 def test_oauthlib_not_forced():
     """Test that OAUTHLIB variables are not forced by config"""
@@ -19,16 +22,15 @@ def test_oauthlib_not_forced():
     print("="*80)
     
     # Clear any existing OAUTHLIB variables
-    for var in ['OAUTHLIB_INSECURE_TRANSPORT', 'OAUTHLIB_RELAX_TOKEN_SCOPE', 'OAUTHLIB_IGNORE_SCOPE_CHANGE']:
+    for var in OAUTHLIB_VARS:
         os.environ.pop(var, None)
     
     # Import config
     from api.config import Settings
     
     # Check if variables are still not set
-    vars_to_check = ['OAUTHLIB_INSECURE_TRANSPORT', 'OAUTHLIB_RELAX_TOKEN_SCOPE', 'OAUTHLIB_IGNORE_SCOPE_CHANGE']
     passed = True
-    for var in vars_to_check:
+    for var in OAUTHLIB_VARS:
         value = os.environ.get(var)
         if value:
             print(f"✗ FAIL: {var} is set to '{value}' (should not be set by config.py)")
