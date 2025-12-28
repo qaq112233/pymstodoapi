@@ -70,7 +70,7 @@ app = FastAPI(
 # Global exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    # Re-raise HTTPException to preserve correct status codes
+    # Return HTTPException with correct status code to preserve proper error responses
     if isinstance(exc, HTTPException):
         return JSONResponse(
             status_code=exc.status_code,

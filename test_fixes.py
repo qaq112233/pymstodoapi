@@ -226,7 +226,6 @@ def main():
         print("  export CLIENT_SECRET=test_client_secret")
         print("  export ENABLE_API_KEY=true")
         print("  export X_API_KEY=test_secret_key")
-        print("  cd /home/runner/work/pymstodoapi/pymstodoapi")
         print("  uvicorn api.main:app --reload")
         sys.exit(1)
     
