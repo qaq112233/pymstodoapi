@@ -123,11 +123,12 @@ def test_timezone_handling():
         shanghai_time = utc_time.astimezone(shanghai_tz)
         
         # Shanghai should be UTC+8
+        EXPECTED_SHANGHAI_OFFSET_HOURS = 8
         time_diff = (shanghai_time.utcoffset().total_seconds()) / 3600
-        if time_diff == 8:
+        if time_diff == EXPECTED_SHANGHAI_OFFSET_HOURS:
             print(f"✓ PASS: Shanghai timezone is correctly UTC+8")
         else:
-            print(f"✗ FAIL: Shanghai timezone offset is {time_diff}, expected 8")
+            print(f"✗ FAIL: Shanghai timezone offset is {time_diff}, expected {EXPECTED_SHANGHAI_OFFSET_HOURS}")
             return False
         
         return True
@@ -175,13 +176,14 @@ def test_route_registration():
         print(f"✓ PASS: tasks.html route registered at {tasks_html_route.path}")
         
         # Verify HTML route doesn't require API key
+        # Check route dependencies directly
         from api.dependencies import verify_api_key
         
-        # Check if verify_api_key is NOT in the dependencies
         has_api_key_dep = False
-        if hasattr(tasks_html_route, 'dependant'):
+        if hasattr(tasks_html_route, 'dependant') and hasattr(tasks_html_route.dependant, 'dependencies'):
             for dep in tasks_html_route.dependant.dependencies:
-                if 'verify_api_key' in str(dep.call):
+                # Check if the dependency is the verify_api_key function
+                if hasattr(dep, 'call') and dep.call == verify_api_key:
                     has_api_key_dep = True
                     break
         

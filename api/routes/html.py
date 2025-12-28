@@ -89,8 +89,9 @@ async def render_tasks_html(
                     # dueDateTime format from API: {'dateTime': '2024-01-01T00:00:00.0000000', 'timeZone': 'UTC'}
                     due_dt_str = task.dueDateTime.get('dateTime', '')
                     if due_dt_str:
-                        # Parse the datetime string
-                        due_dt = datetime.fromisoformat(due_dt_str.replace('Z', '+00:00'))
+                        # Parse the datetime string (remove 'Z' suffix if present for ISO format compatibility)
+                        due_dt_str_clean = due_dt_str.rstrip('Z')
+                        due_dt = datetime.fromisoformat(due_dt_str_clean)
                         
                         # Get timezone from task or default to UTC
                         task_tz_str = task.dueDateTime.get('timeZone', 'UTC')
@@ -99,7 +100,8 @@ async def render_tasks_html(
                         else:
                             try:
                                 task_tz = pytz.timezone(task_tz_str)
-                            except:
+                            except pytz.UnknownTimeZoneError:
+                                logger.warning(f"Unknown timezone {task_tz_str}, defaulting to UTC")
                                 task_tz = pytz.UTC
                         
                         # If datetime is naive, localize it
