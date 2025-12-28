@@ -7,7 +7,7 @@ from datetime import datetime
 import logging
 
 from ..graph_client import GraphAPIClient, GraphAPIError, TaskStatusFilter, GRAPH_API_DATETIME_FORMAT
-from ..models import TaskCreate, TaskUpdate, TaskResponse, TaskStatusUpdate
+from ..models import TaskCreate, TaskUpdate, TaskResponse, TaskStatusUpdate, PaginatedTaskResponse
 from ..dependencies import get_todo_client
 
 logger = logging.getLogger(__name__)
@@ -143,23 +143,25 @@ from fastapi import APIRouter as _APIRouter
 lists_tasks_router = _APIRouter()
 
 
-@lists_tasks_router.get("/{list_id}/tasks", response_model=List[TaskResponse])
+@lists_tasks_router.get("/{list_id}/tasks", response_model=PaginatedTaskResponse)
 async def get_list_tasks(
     list_id: str,
     status: Optional[str] = Query('notCompleted', description="Filter by status: completed, notCompleted, or all"),
     limit: int = Query(1000, description="Maximum number of tasks to return"),
+    skip_token: Optional[str] = Query(None, description="Pagination token for next page"),
     client: GraphAPIClient = Depends(get_todo_client)
 ):
     """
-    Get all tasks in a task list
+    Get all tasks in a task list with pagination support
     
     Args:
         list_id: Task list ID
         status: Filter by status (completed, notCompleted, all)
         limit: Maximum number of tasks to return
+        skip_token: Pagination token for fetching next page
         
     Returns:
-        List of tasks
+        Paginated list of tasks
     """
     try:
         # Map status string to TaskStatusFilter
@@ -170,8 +172,12 @@ async def get_list_tasks(
         }
         status_filter = status_filter_map.get(status, TaskStatusFilter.NOT_COMPLETED)
         
-        tasks = await client.get_tasks(list_id=list_id, limit=limit, status=status_filter)
-        return [task_to_response(task) for task in tasks]
+        result = await client.get_tasks(list_id=list_id, limit=limit, status=status_filter, skip_token=skip_token)
+        return PaginatedTaskResponse(
+            value=[task_to_response(task) for task in result['value']],
+            nextLink=result.get('nextLink'),
+            count=result['count']
+        )
     except GraphAPIError as e:
         logger.error(f"Failed to get tasks for list {list_id}: {e}")
         raise HTTPException(

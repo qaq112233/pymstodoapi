@@ -139,23 +139,31 @@ class GraphAPIClient:
     
     # List operations
     
-    async def get_lists(self, limit: int = 99) -> List[TaskList]:
+    async def get_lists(self, limit: int = 99, skip_token: Optional[str] = None) -> Dict[str, Any]:
         """
-        Get all task lists
+        Get all task lists with pagination support
         
         Args:
             limit: Maximum number of lists to return
+            skip_token: Pagination token for next page
             
         Returns:
-            List of TaskList objects
+            Dictionary with 'value' (list of TaskList objects), 'nextLink' (optional), and 'count'
         """
         endpoint = "/me/todo/lists"
         params = {"$top": limit}
         
+        if skip_token:
+            params["$skiptoken"] = skip_token
+        
         response = await self._make_request("GET", endpoint, params=params)
         lists_data = response.get('value', [])
         
-        return [TaskList(list_data) for list_data in lists_data]
+        return {
+            'value': [TaskList(list_data) for list_data in lists_data],
+            'nextLink': response.get('@odata.nextLink'),
+            'count': len(lists_data)
+        }
     
     async def get_list(self, list_id: str) -> TaskList:
         """
@@ -224,21 +232,26 @@ class GraphAPIClient:
         self,
         list_id: str,
         limit: int = 1000,
-        status: str = TaskStatusFilter.NOT_COMPLETED
-    ) -> List[Task]:
+        status: str = TaskStatusFilter.NOT_COMPLETED,
+        skip_token: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
-        Get tasks from a list
+        Get tasks from a list with pagination support
         
         Args:
             list_id: Task list ID
             limit: Maximum number of tasks to return
             status: Filter by status (all, completed, notCompleted)
+            skip_token: Pagination token for next page
             
         Returns:
-            List of Task objects
+            Dictionary with 'value' (list of Task objects), 'nextLink' (optional), and 'count'
         """
         endpoint = f"/me/todo/lists/{list_id}/tasks"
         params = {"$top": limit}
+        
+        if skip_token:
+            params["$skiptoken"] = skip_token
         
         # Add status filter
         if status == TaskStatusFilter.COMPLETED:
@@ -250,7 +263,11 @@ class GraphAPIClient:
         response = await self._make_request("GET", endpoint, params=params)
         tasks_data = response.get('value', [])
         
-        return [Task(task_data) for task_data in tasks_data]
+        return {
+            'value': [Task(task_data) for task_data in tasks_data],
+            'nextLink': response.get('@odata.nextLink'),
+            'count': len(tasks_data)
+        }
     
     async def get_task(self, task_id: str, list_id: str) -> Task:
         """

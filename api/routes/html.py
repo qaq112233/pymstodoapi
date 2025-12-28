@@ -65,11 +65,12 @@ async def render_tasks_html(
     """
     try:
         # Get all incomplete tasks
-        tasks = await client.get_tasks(
+        result = await client.get_tasks(
             list_id=list_id, 
             limit=1000, 
             status=TaskStatusFilter.NOT_COMPLETED
         )
+        tasks = result['value']
         
         # Get current date in Shanghai timezone
         now_shanghai = datetime.now(SHANGHAI_TZ)

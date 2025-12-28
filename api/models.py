@@ -53,6 +53,13 @@ class TaskListResponse(BaseModel):
     wellknownListName: Optional[str] = None
 
 
+class PaginatedTaskListResponse(BaseModel):
+    """Paginated task list response"""
+    value: list[TaskListResponse]
+    nextLink: Optional[str] = Field(None, description="URL to fetch next page of results")
+    count: int = Field(description="Total number of items in current page")
+
+
 # Task Models
 class DateTimeTimeZone(BaseModel):
     """DateTime with timezone"""
@@ -112,3 +119,10 @@ class TaskResponse(BaseModel):
 class TaskStatusUpdate(BaseModel):
     """Update task status"""
     completed: bool = Field(..., description="Set to true to mark as completed, false for incomplete")
+
+
+class PaginatedTaskResponse(BaseModel):
+    """Paginated task response"""
+    value: list[TaskResponse]
+    nextLink: Optional[str] = Field(None, description="URL to fetch next page of results")
+    count: int = Field(description="Total number of items in current page")

@@ -1,12 +1,12 @@
 """
 API Routes - Task Lists
 """
-from fastapi import APIRouter, HTTPException, Depends
-from typing import List
+from fastapi import APIRouter, HTTPException, Depends, Query
+from typing import List, Optional
 import logging
 
 from ..graph_client import GraphAPIClient, GraphAPIError
-from ..models import TaskListCreate, TaskListUpdate, TaskListResponse
+from ..models import TaskListCreate, TaskListUpdate, TaskListResponse, PaginatedTaskListResponse
 from ..dependencies import get_todo_client
 
 logger = logging.getLogger(__name__)
@@ -14,32 +14,38 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.get("", response_model=List[TaskListResponse])
+@router.get("", response_model=PaginatedTaskListResponse)
 async def get_all_lists(
-    limit: int = 99,
+    limit: int = Query(99, description="Maximum number of lists to return (default: 99)"),
+    skip_token: Optional[str] = Query(None, description="Pagination token for next page"),
     client: GraphAPIClient = Depends(get_todo_client)
 ):
     """
-    Get all task lists
+    Get all task lists with pagination support
     
     Args:
         limit: Maximum number of lists to return (default: 99)
+        skip_token: Pagination token for fetching next page
         
     Returns:
-        List of task lists
+        Paginated list of task lists
     """
     try:
-        lists = await client.get_lists(limit=limit)
-        return [
-            TaskListResponse(
-                list_id=lst.list_id,
-                displayName=lst.displayName,
-                isOwner=lst.isOwner,
-                isShared=lst.isShared,
-                wellknownListName=lst.wellknownListName
-            )
-            for lst in lists
-        ]
+        result = await client.get_lists(limit=limit, skip_token=skip_token)
+        return PaginatedTaskListResponse(
+            value=[
+                TaskListResponse(
+                    list_id=lst.list_id,
+                    displayName=lst.displayName,
+                    isOwner=lst.isOwner,
+                    isShared=lst.isShared,
+                    wellknownListName=lst.wellknownListName
+                )
+                for lst in result['value']
+            ],
+            nextLink=result.get('nextLink'),
+            count=result['count']
+        )
     except GraphAPIError as e:
         logger.error(f"Failed to get lists: {e}")
         raise HTTPException(
