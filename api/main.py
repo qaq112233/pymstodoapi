@@ -27,6 +27,15 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     logger.info("Starting MS To Do API Gateway...")
+    
+    # Validate settings early to fail fast on misconfiguration
+    try:
+        settings.validate()
+        logger.info("Settings validation passed")
+    except ValueError as e:
+        logger.error(f"Settings validation failed: {e}")
+        raise
+    
     logger.info(f"API Prefix: {settings.api_prefix}")
     logger.info(f"API Key Protection: {'Enabled' if settings.enable_api_key else 'Disabled'}")
     logger.info(f"Token Cache Path: {settings.token_cache_path}")
@@ -61,6 +70,15 @@ app = FastAPI(
 # Global exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    # Re-raise HTTPException to preserve correct status codes
+    if isinstance(exc, HTTPException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "detail": exc.detail
+            }
+        )
+    
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,

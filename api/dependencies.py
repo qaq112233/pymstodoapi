@@ -9,12 +9,12 @@ from .config import settings
 from .auth import AuthManager
 
 
-async def verify_api_key(x_api_key: Optional[str] = Header(None)) -> None:
+async def verify_api_key(x_api_key: Optional[str] = Header(None, alias="X-API-KEY")) -> None:
     """
     Verify API key if enabled
     
     Args:
-        x_api_key: API key from request header
+        x_api_key: API key from request header (X-API-KEY)
         
     Raises:
         HTTPException: If API key is invalid or missing
