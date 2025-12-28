@@ -85,7 +85,7 @@ api/
 - 使用 `python:3.11-slim` 基础镜像
 - 多阶段构建分离编译和运行环境
 - 固定版本依赖，避免不必要的包
-- 从PyPI安装pymstodo，无需打包源码
+- 使用 MSAL 官方库和 Microsoft Graph API
 
 ## 文档
 
