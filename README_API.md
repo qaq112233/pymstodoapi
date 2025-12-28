@@ -1,6 +1,6 @@
 # Dockerized MS To Do API Gateway
 
-一个基于 Python 的 RESTful API 服务，使用 pymstodo 库与 Microsoft To Do API 交互。
+一个基于 Python 的 RESTful API 服务，使用 MSAL 官方库和 Microsoft Graph API 与 Microsoft To Do 交互。
 
 ## 功能特性
 
@@ -47,6 +47,9 @@ CLIENT_SECRET=your_client_secret_here
 
 可选的配置项：
 ```env
+# Microsoft Graph API 版本（v1.0 或 beta，默认：beta）
+GRAPH_API_VERSION=beta
+
 # 自定义 API 基础路径（例如：/secret/api）
 API_PREFIX=
 
@@ -265,7 +268,8 @@ docker-compose down -v
 │   ├── __init__.py
 │   ├── main.py                   # FastAPI 应用主文件
 │   ├── config.py                 # 配置管理
-│   ├── auth.py                   # 认证和 Token 管理
+│   ├── auth.py                   # 认证和 Token 管理（MSAL）
+│   ├── graph_client.py           # Microsoft Graph API 客户端
 │   ├── dependencies.py           # FastAPI 依赖注入
 │   ├── models.py                 # Pydantic 数据模型
 │   └── routes/                   # API 路由
@@ -273,14 +277,9 @@ docker-compose down -v
 │       ├── auth.py               # 认证路由
 │       ├── lists.py              # 任务列表路由
 │       └── tasks.py              # 任务路由
-├── pymstodo/                     # pymstodo 库
-│   ├── __init__.py
-│   ├── client.py
-│   └── ...
 ├── Dockerfile                    # Docker 镜像定义
 ├── docker-compose.yml            # Docker Compose 配置
 ├── .env.example                  # 环境变量示例
-├── requirements.txt              # pymstodo 依赖
 ├── api_requirements.txt          # API 服务依赖
 └── README_API.md                 # 本文档
 ```
@@ -323,7 +322,8 @@ PORT=8080
 
 - **Python 3.11**
 - **FastAPI** - 现代的高性能 Web 框架
-- **pymstodo** - Microsoft To Do API 客户端库
+- **MSAL** - Microsoft Authentication Library
+- **Microsoft Graph API** - Microsoft To Do API 客户端
 - **Uvicorn** - ASGI 服务器
 - **Pydantic** - 数据验证和设置管理
 - **Docker** - 容器化部署
@@ -340,12 +340,12 @@ source venv/bin/activate  # Linux/Mac
 venv\Scripts\activate  # Windows
 
 # 安装依赖
-pip install -r requirements.txt
 pip install -r api_requirements.txt
 
 # 设置环境变量
 export CLIENT_ID=your_client_id
 export CLIENT_SECRET=your_client_secret
+export GRAPH_API_VERSION=beta
 
 # 运行服务
 python -m uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
@@ -353,7 +353,7 @@ python -m uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 
 ## 许可证
 
-本项目使用与 pymstodo 相同的许可证。
+MIT License
 
 ## 贡献
 
