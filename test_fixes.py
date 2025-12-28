@@ -207,7 +207,7 @@ def test_settings_validation_on_startup():
 
 def main():
     print("="*80)
-    print("TESTING FIXES FOR ISSUE")
+    print("TESTING FIXES FOR HTTP EXCEPTION, SETTINGS VALIDATION, AND API KEY HEADER")
     print("="*80)
     
     # Check if server is running

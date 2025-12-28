@@ -76,7 +76,8 @@ async def global_exception_handler(request: Request, exc: Exception):
             status_code=exc.status_code,
             content={
                 "detail": exc.detail
-            }
+            },
+            headers=getattr(exc, 'headers', None)
         )
     
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
