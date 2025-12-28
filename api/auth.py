@@ -1,34 +1,65 @@
 """
-Authentication and Token Management
+Authentication and Token Management using MSAL
 """
 import json
 import logging
-from typing import Optional
+from typing import Optional, Dict, Any
 from pathlib import Path
 
-from pymstodo.client import ToDoConnection, Token
+import msal
 from .config import settings
+from .graph_client import GraphAPIClient
 
 logger = logging.getLogger(__name__)
 
 
 class AuthManager:
-    """Manages OAuth authentication and token lifecycle"""
+    """Manages OAuth authentication and token lifecycle using MSAL"""
+    
+    # Microsoft Graph API scopes for To Do
+    SCOPES = [
+        "Tasks.ReadWrite",
+        "Tasks.ReadWrite.Shared",
+        "User.Read",
+        "offline_access"
+    ]
+    
+    # OAuth endpoints
+    AUTHORITY = "https://login.microsoftonline.com/common"
+    REDIRECT_URI = "https://localhost/login/authorized"
     
     def __init__(self):
         self.client_id = settings.client_id
         self.client_secret = settings.client_secret
         self.token_file = settings.token_file
-        self.token: Optional[Token] = None
-        self.client: Optional[ToDoConnection] = None
+        self.api_version = settings.graph_api_version
+        self.token_cache = msal.SerializableTokenCache()
+        self.token_data: Optional[Dict[str, Any]] = None
+        self.client: Optional[GraphAPIClient] = None
+        
+        # Initialize MSAL app
+        self.msal_app = msal.ConfidentialClientApplication(
+            client_id=self.client_id,
+            client_credential=self.client_secret,
+            authority=self.AUTHORITY,
+            token_cache=self.token_cache
+        )
     
     def get_authorization_url(self) -> str:
-        """Generate Microsoft OAuth authorization URL"""
-        auth_url = ToDoConnection.get_auth_url(self.client_id)
+        """
+        Generate Microsoft OAuth authorization URL
+        
+        Returns:
+            Authorization URL for user to visit
+        """
+        auth_url = self.msal_app.get_authorization_request_url(
+            scopes=self.SCOPES,
+            redirect_uri=self.REDIRECT_URI
+        )
         logger.info("Generated authorization URL")
         return auth_url
     
-    def exchange_code_for_token(self, redirect_response: str) -> Token:
+    def exchange_code_for_token(self, redirect_response: str) -> Dict[str, Any]:
         """
         Exchange authorization code for access token
         
@@ -36,33 +67,57 @@ class AuthManager:
             redirect_response: The full redirect URL with authorization code
         
         Returns:
-            Token object
+            Token data dictionary
         """
         try:
-            token = ToDoConnection.get_token(
-                self.client_id,
-                self.client_secret,
-                redirect_response
+            # Extract authorization code from redirect URL
+            from urllib.parse import urlparse, parse_qs
+            parsed = urlparse(redirect_response)
+            query_params = parse_qs(parsed.query)
+            
+            if 'code' not in query_params:
+                raise ValueError("No authorization code found in redirect URL")
+            
+            code = query_params['code'][0]
+            
+            # Exchange code for token
+            result = self.msal_app.acquire_token_by_authorization_code(
+                code=code,
+                scopes=self.SCOPES,
+                redirect_uri=self.REDIRECT_URI
             )
-            self.token = token
-            self.save_token(token)
+            
+            if "error" in result:
+                error_msg = result.get("error_description", result.get("error"))
+                logger.error(f"Token exchange failed: {error_msg}")
+                raise ValueError(f"Token exchange failed: {error_msg}")
+            
+            self.token_data = result
+            self.save_token(result)
             self._initialize_client()
             logger.info("Successfully exchanged code for token")
-            return token
+            return result
+            
         except Exception as e:
             logger.error(f"Failed to exchange code for token: {e}")
             raise
     
-    def save_token(self, token: Token) -> None:
+    def save_token(self, token: Dict[str, Any]) -> None:
         """
         Save token to persistent storage
         
         Args:
-            token: Token object to save
+            token: Token data dictionary to save
         """
         try:
+            # Save both token data and cache
+            save_data = {
+                'token': token,
+                'cache': self.token_cache.serialize()
+            }
+            
             with open(self.token_file, 'w') as f:
-                json.dump(token, f, indent=2)
+                json.dump(save_data, f, indent=2)
             logger.info(f"Token saved to {self.token_file}")
         except Exception as e:
             logger.error(f"Failed to save token: {e}")
@@ -81,41 +136,89 @@ class AuthManager:
                 return False
             
             with open(self.token_file, 'r') as f:
-                token = json.load(f)
+                save_data = json.load(f)
             
-            self.token = token
-            self._initialize_client()
-            logger.info("Token loaded from cache")
-            return True
+            # Load token data
+            self.token_data = save_data.get('token')
+            
+            # Load token cache if available
+            if 'cache' in save_data:
+                self.token_cache.deserialize(save_data['cache'])
+            
+            # Try to get a valid token (will refresh if needed)
+            accounts = self.msal_app.get_accounts()
+            if accounts:
+                # Try silent token acquisition
+                result = self.msal_app.acquire_token_silent(
+                    scopes=self.SCOPES,
+                    account=accounts[0]
+                )
+                
+                if result and "access_token" in result:
+                    self.token_data = result
+                    self.save_token(result)
+                    self._initialize_client()
+                    logger.info("Token loaded and refreshed from cache")
+                    return True
+            
+            # If we have token data but silent acquisition failed, try to initialize anyway
+            if self.token_data and 'access_token' in self.token_data:
+                self._initialize_client()
+                logger.info("Token loaded from cache")
+                return True
+            
+            return False
+            
         except Exception as e:
             logger.error(f"Failed to load token: {e}")
             return False
     
     def clear_token(self) -> None:
         """Clear token from memory and storage"""
-        self.token = None
+        self.token_data = None
         self.client = None
+        self.token_cache = msal.SerializableTokenCache()
         
         if self.token_file.exists():
             self.token_file.unlink()
             logger.info("Token cache cleared")
     
     def _initialize_client(self) -> None:
-        """Initialize ToDoConnection client with current token"""
-        if self.token:
-            self.client = ToDoConnection(
-                self.client_id,
-                self.client_secret,
-                self.token
+        """Initialize GraphAPIClient with current token"""
+        if self.token_data and 'access_token' in self.token_data:
+            self.client = GraphAPIClient(
+                access_token=self.token_data['access_token'],
+                api_version=self.api_version
             )
-            logger.debug("ToDoConnection client initialized")
+            logger.debug("GraphAPIClient initialized")
     
-    def get_client(self) -> ToDoConnection:
+    def _refresh_token_if_needed(self) -> None:
+        """Refresh token if it's expired or about to expire"""
+        if not self.token_data:
+            return
+        
+        # Check if we need to refresh
+        accounts = self.msal_app.get_accounts()
+        if accounts:
+            result = self.msal_app.acquire_token_silent(
+                scopes=self.SCOPES,
+                account=accounts[0]
+            )
+            
+            if result and "access_token" in result:
+                # Token was refreshed
+                if result.get('access_token') != self.token_data.get('access_token'):
+                    logger.info("Token refreshed")
+                    self.token_data = result
+                    self.save_token(result)
+                    self._initialize_client()
+    
+    def get_client(self) -> GraphAPIClient:
         """
-        Get initialized ToDoConnection client
+        Get initialized GraphAPIClient
         
         Returns:
-            ToDoConnection client
+            GraphAPIClient instance
         
         Raises:
             ValueError: If not authenticated
@@ -123,25 +226,17 @@ class AuthManager:
         if not self.client:
             raise ValueError("Not authenticated. Please login first.")
         
-        # Token refresh is handled internally by pymstodo
-        # But we need to save the refreshed token
-        old_token = self.token.copy() if self.token else None
-        
-        # The client will refresh if needed
-        # We can check if token changed after any operation
+        # Refresh token if needed
+        self._refresh_token_if_needed()
         
         return self.client
     
     def is_authenticated(self) -> bool:
         """Check if user is authenticated"""
-        return self.client is not None and self.token is not None
+        return self.client is not None and self.token_data is not None
     
     def update_token_if_changed(self) -> None:
-        """Save token if it was refreshed"""
-        if self.client and self.token:
-            current_token = self.client.token
-            # Check if token has changed (was refreshed)
-            if current_token != self.token:
-                self.token = current_token
-                self.save_token(current_token)
-                logger.info("Token was refreshed and saved")
+        """Check and save token if it was refreshed"""
+        # This is now handled in _refresh_token_if_needed
+        self._refresh_token_if_needed()
+
