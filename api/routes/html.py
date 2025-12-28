@@ -10,7 +10,7 @@ from pathlib import Path
 import logging
 import pytz
 
-from pymstodo.client import ToDoConnection, PymstodoError, TaskStatusFilter
+from ..graph_client import GraphAPIClient, GraphAPIError, TaskStatusFilter
 from ..dependencies import get_todo_client
 from ..config import settings
 
@@ -50,7 +50,7 @@ async def verify_query_auth(passwd: Optional[str] = Query(None)) -> None:
 async def render_tasks_html(
     list_id: str,
     request: Request,
-    client: ToDoConnection = Depends(get_todo_client),
+    client: GraphAPIClient = Depends(get_todo_client),
     _auth: None = Depends(verify_query_auth)
 ):
     """
@@ -86,31 +86,32 @@ async def render_tasks_html(
             if task.dueDateTime:
                 # Parse the due date and convert to Shanghai timezone
                 try:
-                    # dueDateTime format from API: {'dateTime': '2024-01-01T00:00:00.0000000', 'timeZone': 'UTC'}
-                    due_dt_str = task.dueDateTime.get('dateTime', '')
-                    if due_dt_str:
-                        # Parse the datetime string (remove 'Z' suffix if present for ISO format compatibility)
-                        due_dt_str_clean = due_dt_str.rstrip('Z')
-                        due_dt = datetime.fromisoformat(due_dt_str_clean)
-                        
-                        # Get timezone from task or default to UTC
-                        task_tz_str = task.dueDateTime.get('timeZone', 'UTC')
-                        if task_tz_str == 'UTC':
-                            task_tz = pytz.UTC
-                        else:
-                            try:
-                                task_tz = pytz.timezone(task_tz_str)
-                            except pytz.UnknownTimeZoneError:
-                                logger.warning(f"Unknown timezone {task_tz_str}, defaulting to UTC")
+                    # dueDateTime format from Graph API: {'dateTime': '2024-01-01T00:00:00.0000000', 'timeZone': 'UTC'}
+                    if isinstance(task.dueDateTime, dict):
+                        due_dt_str = task.dueDateTime.get('dateTime', '')
+                        if due_dt_str:
+                            # Parse the datetime string (remove 'Z' suffix if present for ISO format compatibility)
+                            due_dt_str_clean = due_dt_str.rstrip('Z')
+                            due_dt = datetime.fromisoformat(due_dt_str_clean)
+                            
+                            # Get timezone from task or default to UTC
+                            task_tz_str = task.dueDateTime.get('timeZone', 'UTC')
+                            if task_tz_str == 'UTC':
                                 task_tz = pytz.UTC
-                        
-                        # If datetime is naive, localize it
-                        if due_dt.tzinfo is None:
-                            due_dt = task_tz.localize(due_dt)
-                        
-                        # Convert to Shanghai timezone
-                        due_dt_shanghai = due_dt.astimezone(SHANGHAI_TZ)
-                        is_due_today = due_dt_shanghai.date() == today_date
+                            else:
+                                try:
+                                    task_tz = pytz.timezone(task_tz_str)
+                                except pytz.UnknownTimeZoneError:
+                                    logger.warning(f"Unknown timezone {task_tz_str}, defaulting to UTC")
+                                    task_tz = pytz.UTC
+                            
+                            # If datetime is naive, localize it
+                            if due_dt.tzinfo is None:
+                                due_dt = task_tz.localize(due_dt)
+                            
+                            # Convert to Shanghai timezone
+                            due_dt_shanghai = due_dt.astimezone(SHANGHAI_TZ)
+                            is_due_today = due_dt_shanghai.date() == today_date
                 except Exception as e:
                     logger.warning(f"Failed to parse due date for task {task.task_id}: {e}")
             
@@ -133,7 +134,7 @@ async def render_tasks_html(
             }
         )
         
-    except PymstodoError as e:
+    except GraphAPIError as e:
         logger.error(f"Failed to get tasks for list {list_id}: {e}")
         raise HTTPException(
             status_code=404 if "404" in str(e) else 500,

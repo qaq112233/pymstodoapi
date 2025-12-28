@@ -1,6 +1,6 @@
 """
 Dockerized MS To Do API Gateway
-RESTful API service for Microsoft To Do using pymstodo library
+RESTful API service for Microsoft To Do using MSAL and Microsoft Graph API
 """
 from fastapi import FastAPI, Depends, HTTPException, Header, Request
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -58,7 +58,7 @@ async def lifespan(app: FastAPI):
 # Create FastAPI app with prefix support
 app = FastAPI(
     title="MS To Do API Gateway",
-    description="RESTful API service for Microsoft To Do using pymstodo library",
+    description="RESTful API service for Microsoft To Do using MSAL and Microsoft Graph API",
     version="1.0.0",
     lifespan=lifespan,
     docs_url=None,  # Disable default docs

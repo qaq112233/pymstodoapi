@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 import logging
 
-from pymstodo.client import ToDoConnection, PymstodoError
+from ..graph_client import GraphAPIClient, GraphAPIError
 from ..models import TaskListCreate, TaskListUpdate, TaskListResponse
 from ..dependencies import get_todo_client
 
@@ -17,7 +17,7 @@ router = APIRouter()
 @router.get("", response_model=List[TaskListResponse])
 async def get_all_lists(
     limit: int = 99,
-    client: ToDoConnection = Depends(get_todo_client)
+    client: GraphAPIClient = Depends(get_todo_client)
 ):
     """
     Get all task lists
@@ -40,7 +40,7 @@ async def get_all_lists(
             )
             for lst in lists
         ]
-    except PymstodoError as e:
+    except GraphAPIError as e:
         logger.error(f"Failed to get lists: {e}")
         raise HTTPException(
             status_code=500,
@@ -51,7 +51,7 @@ async def get_all_lists(
 @router.post("", response_model=TaskListResponse, status_code=201)
 async def create_list(
     list_data: TaskListCreate,
-    client: ToDoConnection = Depends(get_todo_client)
+    client: GraphAPIClient = Depends(get_todo_client)
 ):
     """
     Create a new task list
@@ -71,7 +71,7 @@ async def create_list(
             isShared=new_list.isShared,
             wellknownListName=new_list.wellknownListName
         )
-    except PymstodoError as e:
+    except GraphAPIError as e:
         logger.error(f"Failed to create list: {e}")
         raise HTTPException(
             status_code=500,
@@ -82,7 +82,7 @@ async def create_list(
 @router.get("/{list_id}", response_model=TaskListResponse)
 async def get_list(
     list_id: str,
-    client: ToDoConnection = Depends(get_todo_client)
+    client: GraphAPIClient = Depends(get_todo_client)
 ):
     """
     Get a specific task list
@@ -102,7 +102,7 @@ async def get_list(
             isShared=lst.isShared,
             wellknownListName=lst.wellknownListName
         )
-    except PymstodoError as e:
+    except GraphAPIError as e:
         logger.error(f"Failed to get list {list_id}: {e}")
         raise HTTPException(
             status_code=404 if "404" in str(e) else 500,
@@ -114,7 +114,7 @@ async def get_list(
 async def update_list(
     list_id: str,
     list_data: TaskListUpdate,
-    client: ToDoConnection = Depends(get_todo_client)
+    client: GraphAPIClient = Depends(get_todo_client)
 ):
     """
     Update a task list
@@ -136,7 +136,7 @@ async def update_list(
             isShared=updated_list.isShared,
             wellknownListName=updated_list.wellknownListName
         )
-    except PymstodoError as e:
+    except GraphAPIError as e:
         logger.error(f"Failed to update list {list_id}: {e}")
         raise HTTPException(
             status_code=404 if "404" in str(e) else 500,
@@ -147,7 +147,7 @@ async def update_list(
 @router.delete("/{list_id}", status_code=204)
 async def delete_list(
     list_id: str,
-    client: ToDoConnection = Depends(get_todo_client)
+    client: GraphAPIClient = Depends(get_todo_client)
 ):
     """
     Delete a task list
@@ -158,7 +158,7 @@ async def delete_list(
     try:
         client.delete_list(list_id=list_id)
         return None
-    except PymstodoError as e:
+    except GraphAPIError as e:
         logger.error(f"Failed to delete list {list_id}: {e}")
         raise HTTPException(
             status_code=404 if "404" in str(e) else 500,
