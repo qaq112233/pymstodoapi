@@ -76,6 +76,7 @@ api/
 - ✅ Docker 容器化部署
 - ✅ 非root用户运行（安全）
 - ✅ 健康检查
+- ✅ API密钥保护（可选）
 
 ## 镜像优化
 
@@ -89,6 +90,7 @@ api/
 ## 文档
 
 - [AUTHENTICATION_GUIDE.md](AUTHENTICATION_GUIDE.md) - 详细认证指南
+- [API_KEY_GUIDE.md](API_KEY_GUIDE.md) - API密钥保护指南
 - [DEPLOYMENT.md](DEPLOYMENT.md) - 生产部署指南
 - [README_API.md](README_API.md) - 完整API文档
 - [SOLUTION.md](SOLUTION.md) - 技术方案说明

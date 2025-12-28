@@ -6,7 +6,7 @@ from typing import Optional
 import logging
 
 from ..models import LoginResponse, TokenResponse
-from ..dependencies import get_auth_manager
+from ..dependencies import get_auth_manager, verify_api_key
 from ..auth import AuthManager
 from ..config import settings
 
@@ -308,7 +308,10 @@ async def callback_post(
 
 
 @router.post("/logout", response_model=TokenResponse)
-async def logout(auth_manager: AuthManager = Depends(get_auth_manager)):
+async def logout(
+    auth_manager: AuthManager = Depends(get_auth_manager),
+    _: None = Depends(verify_api_key)
+):
     """
     Logout and clear token cache
     
@@ -331,7 +334,10 @@ async def logout(auth_manager: AuthManager = Depends(get_auth_manager)):
 
 
 @router.get("/status")
-async def status(auth_manager: AuthManager = Depends(get_auth_manager)):
+async def status(
+    auth_manager: AuthManager = Depends(get_auth_manager),
+    _: None = Depends(verify_api_key)
+):
     """
     Check authentication status
     
