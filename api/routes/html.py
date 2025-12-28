@@ -86,8 +86,8 @@ async def render_tasks_html(
             if task.dueDateTime:
                 # Parse the due date and convert to Shanghai timezone
                 try:
-                    # dueDateTime format from Graph API: {'dateTime': '2024-01-01T00:00:00.0000000', 'timeZone': 'UTC'}
-                    if isinstance(task.dueDateTime, dict):
+                    # dueDateTime format from Microsoft Graph API: {'dateTime': '2024-01-01T00:00:00.0000000', 'timeZone': 'UTC'}
+                    if isinstance(task.dueDateTime, dict) and 'dateTime' in task.dueDateTime:
                         due_dt_str = task.dueDateTime.get('dateTime', '')
                         if due_dt_str:
                             # Parse the datetime string (remove 'Z' suffix if present for ISO format compatibility)
