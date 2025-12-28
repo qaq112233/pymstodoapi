@@ -8,6 +8,9 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
+# Microsoft Graph API datetime format constant
+GRAPH_API_DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S.0000000'
+
 
 class GraphAPIError(Exception):
     """Custom exception for Graph API errors"""
@@ -108,12 +111,20 @@ class GraphAPIClient:
                 return {}
             
             if response.status_code >= 400:
-                error_data = response.json() if response.content else {}
-                error_msg = error_data.get('error', {}).get('message', response.text)
+                try:
+                    error_data = response.json()
+                    error_msg = error_data.get('error', {}).get('message', response.text)
+                except (ValueError, KeyError):
+                    error_msg = response.text
                 logger.error(f"Graph API error {response.status_code}: {error_msg}")
                 raise GraphAPIError(f"{response.status_code}: {error_msg}")
             
-            return response.json() if response.content else {}
+            # Parse JSON response
+            try:
+                return response.json() if response.content else {}
+            except ValueError as e:
+                logger.error(f"Failed to parse JSON response: {e}")
+                raise GraphAPIError(f"Invalid JSON response: {str(e)}")
             
         except requests.exceptions.RequestException as e:
             logger.error(f"Request failed: {e}")
@@ -280,7 +291,7 @@ class GraphAPIClient:
         
         if due_date:
             data['dueDateTime'] = {
-                'dateTime': due_date.strftime('%Y-%m-%dT%H:%M:%S.0000000'),
+                'dateTime': due_date.strftime(GRAPH_API_DATETIME_FORMAT),
                 'timeZone': 'UTC'
             }
         

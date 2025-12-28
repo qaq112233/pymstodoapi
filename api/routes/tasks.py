@@ -6,7 +6,7 @@ from typing import List, Optional
 from datetime import datetime
 import logging
 
-from ..graph_client import GraphAPIClient, GraphAPIError, TaskStatusFilter
+from ..graph_client import GraphAPIClient, GraphAPIError, TaskStatusFilter, GRAPH_API_DATETIME_FORMAT
 from ..models import TaskCreate, TaskUpdate, TaskResponse, TaskStatusUpdate
 from ..dependencies import get_todo_client
 
@@ -92,13 +92,13 @@ async def update_task(
                 # Parse ISO format datetime
                 dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
                 update_dict['dueDateTime'] = {
-                    'dateTime': dt.strftime('%Y-%m-%dT%H:%M:%S.0000000'),
+                    'dateTime': dt.strftime(GRAPH_API_DATETIME_FORMAT),
                     'timeZone': 'UTC'
                 }
             elif key == 'reminderDateTime' and value:
                 dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
                 update_dict['reminderDateTime'] = {
-                    'dateTime': dt.strftime('%Y-%m-%dT%H:%M:%S.0000000'),
+                    'dateTime': dt.strftime(GRAPH_API_DATETIME_FORMAT),
                     'timeZone': 'UTC'
                 }
             else:
@@ -219,7 +219,7 @@ async def create_task(
         if task_data.reminderDateTime:
             dt = datetime.fromisoformat(task_data.reminderDateTime.replace('Z', '+00:00'))
             update_dict['reminderDateTime'] = {
-                'dateTime': dt.strftime('%Y-%m-%dT%H:%M:%S.0000000'),
+                'dateTime': dt.strftime(GRAPH_API_DATETIME_FORMAT),
                 'timeZone': 'UTC'
             }
         if task_data.categories:

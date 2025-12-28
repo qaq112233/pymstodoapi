@@ -24,13 +24,13 @@ class AuthManager:
         "offline_access"
     ]
     
-    # OAuth endpoints
+    # OAuth authority endpoint
     AUTHORITY = "https://login.microsoftonline.com/common"
-    REDIRECT_URI = "https://localhost/login/authorized"
     
     def __init__(self):
         self.client_id = settings.client_id
         self.client_secret = settings.client_secret
+        self.redirect_uri = settings.redirect_uri
         self.token_file = settings.token_file
         self.api_version = settings.graph_api_version
         self.token_cache = msal.SerializableTokenCache()
@@ -58,7 +58,7 @@ class AuthManager:
         """
         auth_url = self._get_msal_app().get_authorization_request_url(
             scopes=self.SCOPES,
-            redirect_uri=self.REDIRECT_URI
+            redirect_uri=self.redirect_uri
         )
         logger.info("Generated authorization URL")
         return auth_url
@@ -88,7 +88,7 @@ class AuthManager:
             result = self._get_msal_app().acquire_token_by_authorization_code(
                 code=code,
                 scopes=self.SCOPES,
-                redirect_uri=self.REDIRECT_URI
+                redirect_uri=self.redirect_uri
             )
             
             if "error" in result:
