@@ -65,7 +65,7 @@ async def render_tasks_html(
     """
     try:
         # Get all incomplete tasks
-        tasks = client.get_tasks(
+        tasks = await client.get_tasks(
             list_id=list_id, 
             limit=1000, 
             status=TaskStatusFilter.NOT_COMPLETED
@@ -137,8 +137,8 @@ async def render_tasks_html(
     except GraphAPIError as e:
         logger.error(f"Failed to get tasks for list {list_id}: {e}")
         raise HTTPException(
-            status_code=404 if "404" in str(e) else 500,
-            detail=f"Failed to get tasks: {str(e)}"
+            status_code=e.status_code,
+            detail=e.message
         )
     except Exception as e:
         logger.error(f"Error rendering tasks HTML: {e}", exc_info=True)
