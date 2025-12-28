@@ -36,14 +36,18 @@ class AuthManager:
         self.token_cache = msal.SerializableTokenCache()
         self.token_data: Optional[Dict[str, Any]] = None
         self.client: Optional[GraphAPIClient] = None
-        
-        # Initialize MSAL app
-        self.msal_app = msal.ConfidentialClientApplication(
-            client_id=self.client_id,
-            client_credential=self.client_secret,
-            authority=self.AUTHORITY,
-            token_cache=self.token_cache
-        )
+        self.msal_app: Optional[msal.ConfidentialClientApplication] = None
+    
+    def _get_msal_app(self) -> msal.ConfidentialClientApplication:
+        """Lazy initialization of MSAL app to avoid network calls at startup"""
+        if self.msal_app is None:
+            self.msal_app = msal.ConfidentialClientApplication(
+                client_id=self.client_id,
+                client_credential=self.client_secret,
+                authority=self.AUTHORITY,
+                token_cache=self.token_cache
+            )
+        return self.msal_app
     
     def get_authorization_url(self) -> str:
         """
@@ -52,7 +56,7 @@ class AuthManager:
         Returns:
             Authorization URL for user to visit
         """
-        auth_url = self.msal_app.get_authorization_request_url(
+        auth_url = self._get_msal_app().get_authorization_request_url(
             scopes=self.SCOPES,
             redirect_uri=self.REDIRECT_URI
         )
@@ -81,7 +85,7 @@ class AuthManager:
             code = query_params['code'][0]
             
             # Exchange code for token
-            result = self.msal_app.acquire_token_by_authorization_code(
+            result = self._get_msal_app().acquire_token_by_authorization_code(
                 code=code,
                 scopes=self.SCOPES,
                 redirect_uri=self.REDIRECT_URI
@@ -146,10 +150,10 @@ class AuthManager:
                 self.token_cache.deserialize(save_data['cache'])
             
             # Try to get a valid token (will refresh if needed)
-            accounts = self.msal_app.get_accounts()
+            accounts = self._get_msal_app().get_accounts()
             if accounts:
                 # Try silent token acquisition
-                result = self.msal_app.acquire_token_silent(
+                result = self._get_msal_app().acquire_token_silent(
                     scopes=self.SCOPES,
                     account=accounts[0]
                 )
@@ -198,9 +202,9 @@ class AuthManager:
             return
         
         # Check if we need to refresh
-        accounts = self.msal_app.get_accounts()
+        accounts = self._get_msal_app().get_accounts()
         if accounts:
-            result = self.msal_app.acquire_token_silent(
+            result = self._get_msal_app().acquire_token_silent(
                 scopes=self.SCOPES,
                 account=accounts[0]
             )
