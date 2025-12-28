@@ -6,7 +6,7 @@ from typing import List, Optional
 from datetime import datetime
 import logging
 
-from pymstodo.client import ToDoConnection, PymstodoError, TaskStatusFilter
+from ..graph_client import GraphAPIClient, GraphAPIError, TaskStatusFilter, GRAPH_API_DATETIME_FORMAT
 from ..models import TaskCreate, TaskUpdate, TaskResponse, TaskStatusUpdate
 from ..dependencies import get_todo_client
 
@@ -39,7 +39,7 @@ def task_to_response(task) -> TaskResponse:
 async def get_task(
     task_id: str,
     list_id: str = Query(..., description="Task list ID"),
-    client: ToDoConnection = Depends(get_todo_client)
+    client: GraphAPIClient = Depends(get_todo_client)
 ):
     """
     Get a specific task
@@ -54,7 +54,7 @@ async def get_task(
     try:
         task = client.get_task(task_id=task_id, list_id=list_id)
         return task_to_response(task)
-    except PymstodoError as e:
+    except GraphAPIError as e:
         logger.error(f"Failed to get task {task_id}: {e}")
         raise HTTPException(
             status_code=404 if "404" in str(e) else 500,
@@ -67,7 +67,7 @@ async def update_task(
     task_id: str,
     task_data: TaskUpdate,
     list_id: str = Query(..., description="Task list ID"),
-    client: ToDoConnection = Depends(get_todo_client)
+    client: GraphAPIClient = Depends(get_todo_client)
 ):
     """
     Update a task
@@ -92,13 +92,13 @@ async def update_task(
                 # Parse ISO format datetime
                 dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
                 update_dict['dueDateTime'] = {
-                    'dateTime': dt.strftime('%Y-%m-%dT%H:%M:%S.0000000'),
+                    'dateTime': dt.strftime(GRAPH_API_DATETIME_FORMAT),
                     'timeZone': 'UTC'
                 }
             elif key == 'reminderDateTime' and value:
                 dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
                 update_dict['reminderDateTime'] = {
-                    'dateTime': dt.strftime('%Y-%m-%dT%H:%M:%S.0000000'),
+                    'dateTime': dt.strftime(GRAPH_API_DATETIME_FORMAT),
                     'timeZone': 'UTC'
                 }
             else:
@@ -106,7 +106,7 @@ async def update_task(
         
         updated_task = client.update_task(task_id=task_id, list_id=list_id, **update_dict)
         return task_to_response(updated_task)
-    except PymstodoError as e:
+    except GraphAPIError as e:
         logger.error(f"Failed to update task {task_id}: {e}")
         raise HTTPException(
             status_code=404 if "404" in str(e) else 500,
@@ -118,7 +118,7 @@ async def update_task(
 async def delete_task(
     task_id: str,
     list_id: str = Query(..., description="Task list ID"),
-    client: ToDoConnection = Depends(get_todo_client)
+    client: GraphAPIClient = Depends(get_todo_client)
 ):
     """
     Delete a task
@@ -130,7 +130,7 @@ async def delete_task(
     try:
         client.delete_task(task_id=task_id, list_id=list_id)
         return None
-    except PymstodoError as e:
+    except GraphAPIError as e:
         logger.error(f"Failed to delete task {task_id}: {e}")
         raise HTTPException(
             status_code=404 if "404" in str(e) else 500,
@@ -148,7 +148,7 @@ async def get_list_tasks(
     list_id: str,
     status: Optional[str] = Query('notCompleted', description="Filter by status: completed, notCompleted, or all"),
     limit: int = Query(1000, description="Maximum number of tasks to return"),
-    client: ToDoConnection = Depends(get_todo_client)
+    client: GraphAPIClient = Depends(get_todo_client)
 ):
     """
     Get all tasks in a task list
@@ -172,7 +172,7 @@ async def get_list_tasks(
         
         tasks = client.get_tasks(list_id=list_id, limit=limit, status=status_filter)
         return [task_to_response(task) for task in tasks]
-    except PymstodoError as e:
+    except GraphAPIError as e:
         logger.error(f"Failed to get tasks for list {list_id}: {e}")
         raise HTTPException(
             status_code=404 if "404" in str(e) else 500,
@@ -184,7 +184,7 @@ async def get_list_tasks(
 async def create_task(
     list_id: str,
     task_data: TaskCreate,
-    client: ToDoConnection = Depends(get_todo_client)
+    client: GraphAPIClient = Depends(get_todo_client)
 ):
     """
     Create a new task in a task list
@@ -219,7 +219,7 @@ async def create_task(
         if task_data.reminderDateTime:
             dt = datetime.fromisoformat(task_data.reminderDateTime.replace('Z', '+00:00'))
             update_dict['reminderDateTime'] = {
-                'dateTime': dt.strftime('%Y-%m-%dT%H:%M:%S.0000000'),
+                'dateTime': dt.strftime(GRAPH_API_DATETIME_FORMAT),
                 'timeZone': 'UTC'
             }
         if task_data.categories:
@@ -233,7 +233,7 @@ async def create_task(
             )
         
         return task_to_response(new_task)
-    except PymstodoError as e:
+    except GraphAPIError as e:
         logger.error(f"Failed to create task in list {list_id}: {e}")
         raise HTTPException(
             status_code=500,

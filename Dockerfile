@@ -10,8 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy requirements and install to a local directory
 COPY api_requirements.txt .
-RUN pip install --no-cache-dir --prefix=/build/deps -r api_requirements.txt && \
-    pip install --no-cache-dir --prefix=/build/deps pymstodo
+RUN pip install --no-cache-dir --prefix=/build/deps -r api_requirements.txt
 
 # Final stage - minimal runtime image
 FROM python:3.11-slim

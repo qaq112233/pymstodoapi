@@ -4,7 +4,7 @@ Dependency injection for FastAPI routes
 from fastapi import Header, HTTPException, Request
 from typing import Optional
 
-from pymstodo.client import ToDoConnection
+from .graph_client import GraphAPIClient
 from .config import settings
 from .auth import AuthManager
 
@@ -48,15 +48,15 @@ async def get_auth_manager(request: Request) -> AuthManager:
     return request.app.state.auth_manager
 
 
-async def get_todo_client(request: Request) -> ToDoConnection:
+async def get_todo_client(request: Request) -> GraphAPIClient:
     """
-    Get authenticated ToDoConnection client
+    Get authenticated GraphAPIClient
     
     Args:
         request: FastAPI request object
         
     Returns:
-        ToDoConnection client
+        GraphAPIClient instance
         
     Raises:
         HTTPException: If not authenticated
@@ -77,5 +77,5 @@ async def get_todo_client(request: Request) -> ToDoConnection:
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to get To Do client: {str(e)}"
+            detail=f"Failed to get Graph API client: {str(e)}"
         )

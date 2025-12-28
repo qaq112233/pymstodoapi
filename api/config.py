@@ -18,6 +18,12 @@ class Settings:
         # OAuth Configuration
         self.client_id: str = os.getenv("CLIENT_ID", "")
         self.client_secret: str = os.getenv("CLIENT_SECRET", "")
+        self.redirect_uri: str = os.getenv("REDIRECT_URI", "https://localhost/login/authorized")
+        
+        # Microsoft Graph API Configuration
+        self.graph_api_version: str = os.getenv("GRAPH_API_VERSION", "beta").lower()
+        if self.graph_api_version not in ["v1.0", "beta"]:
+            self.graph_api_version = "beta"
         
         # API Configuration
         self.api_prefix: str = os.getenv("API_PREFIX", "")
