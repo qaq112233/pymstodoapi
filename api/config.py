@@ -39,6 +39,10 @@ class Settings:
         self.host: str = os.getenv("HOST", "0.0.0.0")
         self.port: int = int(os.getenv("PORT", "8000"))
         
+        # HTML Rendering Configuration
+        self.enable_query_auth: bool = os.getenv("ENABLE_QUERY_AUTH", "false").lower() == "true"
+        self.query_passwd: str = os.getenv("QUERY_PASSWD", "")
+        
     def validate(self) -> bool:
         """Validate required settings"""
         if not self.client_id or not self.client_secret:
@@ -46,6 +50,9 @@ class Settings:
         
         if self.enable_api_key and not self.x_api_key:
             raise ValueError("X_API_KEY must be set when ENABLE_API_KEY is true")
+        
+        if self.enable_query_auth and not self.query_passwd:
+            raise ValueError("QUERY_PASSWD must be set when ENABLE_QUERY_AUTH is true")
         
         return True
 
