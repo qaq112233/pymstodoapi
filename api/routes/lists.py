@@ -1,12 +1,12 @@
 """
 API Routes - Task Lists
 """
-from fastapi import APIRouter, HTTPException, Depends
-from typing import List
+from fastapi import APIRouter, HTTPException, Depends, Query
+from typing import List, Optional
 import logging
 
 from ..graph_client import GraphAPIClient, GraphAPIError
-from ..models import TaskListCreate, TaskListUpdate, TaskListResponse
+from ..models import TaskListCreate, TaskListUpdate, TaskListResponse, PaginatedTaskListResponse
 from ..dependencies import get_todo_client
 
 logger = logging.getLogger(__name__)
@@ -14,37 +14,43 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.get("", response_model=List[TaskListResponse])
+@router.get("", response_model=PaginatedTaskListResponse)
 async def get_all_lists(
-    limit: int = 99,
+    limit: int = Query(99, description="Maximum number of lists to return (default: 99)"),
+    skip_token: Optional[str] = Query(None, description="Pagination token for next page"),
     client: GraphAPIClient = Depends(get_todo_client)
 ):
     """
-    Get all task lists
+    Get all task lists with pagination support
     
     Args:
         limit: Maximum number of lists to return (default: 99)
+        skip_token: Pagination token for fetching next page
         
     Returns:
-        List of task lists
+        Paginated list of task lists
     """
     try:
-        lists = client.get_lists(limit=limit)
-        return [
-            TaskListResponse(
-                list_id=lst.list_id,
-                displayName=lst.displayName,
-                isOwner=lst.isOwner,
-                isShared=lst.isShared,
-                wellknownListName=lst.wellknownListName
-            )
-            for lst in lists
-        ]
+        result = await client.get_lists(limit=limit, skip_token=skip_token)
+        return PaginatedTaskListResponse(
+            value=[
+                TaskListResponse(
+                    list_id=lst.list_id,
+                    displayName=lst.displayName,
+                    isOwner=lst.isOwner,
+                    isShared=lst.isShared,
+                    wellknownListName=lst.wellknownListName
+                )
+                for lst in result['value']
+            ],
+            nextLink=result.get('nextLink'),
+            count=result['count']
+        )
     except GraphAPIError as e:
         logger.error(f"Failed to get lists: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get lists: {str(e)}"
+            status_code=e.status_code,
+            detail=e.message
         )
 
 
@@ -63,7 +69,7 @@ async def create_list(
         Created task list
     """
     try:
-        new_list = client.create_list(name=list_data.displayName)
+        new_list = await client.create_list(name=list_data.displayName)
         return TaskListResponse(
             list_id=new_list.list_id,
             displayName=new_list.displayName,
@@ -74,8 +80,8 @@ async def create_list(
     except GraphAPIError as e:
         logger.error(f"Failed to create list: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to create list: {str(e)}"
+            status_code=e.status_code,
+            detail=e.message
         )
 
 
@@ -94,7 +100,7 @@ async def get_list(
         Task list details
     """
     try:
-        lst = client.get_list(list_id=list_id)
+        lst = await client.get_list(list_id=list_id)
         return TaskListResponse(
             list_id=lst.list_id,
             displayName=lst.displayName,
@@ -105,8 +111,8 @@ async def get_list(
     except GraphAPIError as e:
         logger.error(f"Failed to get list {list_id}: {e}")
         raise HTTPException(
-            status_code=404 if "404" in str(e) else 500,
-            detail=f"Failed to get list: {str(e)}"
+            status_code=e.status_code,
+            detail=e.message
         )
 
 
@@ -128,7 +134,7 @@ async def update_list(
     """
     try:
         update_dict = list_data.model_dump(exclude_none=True)
-        updated_list = client.update_list(list_id=list_id, **update_dict)
+        updated_list = await client.update_list(list_id=list_id, **update_dict)
         return TaskListResponse(
             list_id=updated_list.list_id,
             displayName=updated_list.displayName,
@@ -139,8 +145,8 @@ async def update_list(
     except GraphAPIError as e:
         logger.error(f"Failed to update list {list_id}: {e}")
         raise HTTPException(
-            status_code=404 if "404" in str(e) else 500,
-            detail=f"Failed to update list: {str(e)}"
+            status_code=e.status_code,
+            detail=e.message
         )
 
 
@@ -156,11 +162,11 @@ async def delete_list(
         list_id: Task list ID
     """
     try:
-        client.delete_list(list_id=list_id)
+        await client.delete_list(list_id=list_id)
         return None
     except GraphAPIError as e:
         logger.error(f"Failed to delete list {list_id}: {e}")
         raise HTTPException(
-            status_code=404 if "404" in str(e) else 500,
-            detail=f"Failed to delete list: {str(e)}"
+            status_code=e.status_code,
+            detail=e.message
         )

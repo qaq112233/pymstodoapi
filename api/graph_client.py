@@ -2,7 +2,7 @@
 Microsoft Graph API Client for To Do Tasks
 """
 import logging
-import requests
+import httpx
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
@@ -14,7 +14,13 @@ GRAPH_API_DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S.0000000'
 
 class GraphAPIError(Exception):
     """Custom exception for Graph API errors"""
-    pass
+    def __init__(self, message: str, status_code: int = 500):
+        self.message = message
+        self.status_code = status_code
+        super().__init__(self.message)
+    
+    def __str__(self):
+        return f"[{self.status_code}] {self.message}"
 
 
 class TaskStatusFilter:
@@ -72,7 +78,7 @@ class GraphAPIClient:
             "Content-Type": "application/json"
         }
     
-    def _make_request(
+    async def _make_request(
         self,
         method: str,
         endpoint: str,
@@ -97,14 +103,15 @@ class GraphAPIClient:
         url = f"{self.base_url}{endpoint}"
         
         try:
-            response = requests.request(
-                method=method,
-                url=url,
-                headers=self.headers,
-                json=data,
-                params=params,
-                timeout=30
-            )
+            async with httpx.AsyncClient() as client:
+                response = await client.request(
+                    method=method,
+                    url=url,
+                    headers=self.headers,
+                    json=data,
+                    params=params,
+                    timeout=30.0
+                )
             
             # Handle different status codes
             if response.status_code == 204:
@@ -117,40 +124,48 @@ class GraphAPIClient:
                 except (ValueError, KeyError):
                     error_msg = response.text
                 logger.error(f"Graph API error {response.status_code}: {error_msg}")
-                raise GraphAPIError(f"{response.status_code}: {error_msg}")
+                raise GraphAPIError(error_msg, status_code=response.status_code)
             
             # Parse JSON response
             try:
                 return response.json() if response.content else {}
             except ValueError as e:
                 logger.error(f"Failed to parse JSON response: {e}")
-                raise GraphAPIError(f"Invalid JSON response: {str(e)}")
+                raise GraphAPIError(f"Invalid JSON response: {str(e)}", status_code=500)
             
-        except requests.exceptions.RequestException as e:
+        except httpx.RequestError as e:
             logger.error(f"Request failed: {e}")
-            raise GraphAPIError(f"Request failed: {str(e)}")
+            raise GraphAPIError(f"Request failed: {str(e)}", status_code=503)
     
     # List operations
     
-    def get_lists(self, limit: int = 99) -> List[TaskList]:
+    async def get_lists(self, limit: int = 99, skip_token: Optional[str] = None) -> Dict[str, Any]:
         """
-        Get all task lists
+        Get all task lists with pagination support
         
         Args:
             limit: Maximum number of lists to return
+            skip_token: Pagination token for next page
             
         Returns:
-            List of TaskList objects
+            Dictionary with 'value' (list of TaskList objects), 'nextLink' (optional), and 'count'
         """
         endpoint = "/me/todo/lists"
         params = {"$top": limit}
         
-        response = self._make_request("GET", endpoint, params=params)
+        if skip_token:
+            params["$skiptoken"] = skip_token
+        
+        response = await self._make_request("GET", endpoint, params=params)
         lists_data = response.get('value', [])
         
-        return [TaskList(list_data) for list_data in lists_data]
+        return {
+            'value': [TaskList(list_data) for list_data in lists_data],
+            'nextLink': response.get('@odata.nextLink'),
+            'count': len(lists_data)
+        }
     
-    def get_list(self, list_id: str) -> TaskList:
+    async def get_list(self, list_id: str) -> TaskList:
         """
         Get a specific task list
         
@@ -161,10 +176,10 @@ class GraphAPIClient:
             TaskList object
         """
         endpoint = f"/me/todo/lists/{list_id}"
-        response = self._make_request("GET", endpoint)
+        response = await self._make_request("GET", endpoint)
         return TaskList(response)
     
-    def create_list(self, name: str) -> TaskList:
+    async def create_list(self, name: str) -> TaskList:
         """
         Create a new task list
         
@@ -177,10 +192,10 @@ class GraphAPIClient:
         endpoint = "/me/todo/lists"
         data = {"displayName": name}
         
-        response = self._make_request("POST", endpoint, data=data)
+        response = await self._make_request("POST", endpoint, data=data)
         return TaskList(response)
     
-    def update_list(self, list_id: str, **kwargs) -> TaskList:
+    async def update_list(self, list_id: str, **kwargs) -> TaskList:
         """
         Update a task list
         
@@ -198,10 +213,10 @@ class GraphAPIClient:
         if 'displayName' in kwargs:
             data['displayName'] = kwargs['displayName']
         
-        response = self._make_request("PATCH", endpoint, data=data)
+        response = await self._make_request("PATCH", endpoint, data=data)
         return TaskList(response)
     
-    def delete_list(self, list_id: str) -> None:
+    async def delete_list(self, list_id: str) -> None:
         """
         Delete a task list
         
@@ -209,29 +224,34 @@ class GraphAPIClient:
             list_id: Task list ID
         """
         endpoint = f"/me/todo/lists/{list_id}"
-        self._make_request("DELETE", endpoint)
+        await self._make_request("DELETE", endpoint)
     
     # Task operations
     
-    def get_tasks(
+    async def get_tasks(
         self,
         list_id: str,
         limit: int = 1000,
-        status: str = TaskStatusFilter.NOT_COMPLETED
-    ) -> List[Task]:
+        status: str = TaskStatusFilter.NOT_COMPLETED,
+        skip_token: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
-        Get tasks from a list
+        Get tasks from a list with pagination support
         
         Args:
             list_id: Task list ID
             limit: Maximum number of tasks to return
             status: Filter by status (all, completed, notCompleted)
+            skip_token: Pagination token for next page
             
         Returns:
-            List of Task objects
+            Dictionary with 'value' (list of Task objects), 'nextLink' (optional), and 'count'
         """
         endpoint = f"/me/todo/lists/{list_id}/tasks"
         params = {"$top": limit}
+        
+        if skip_token:
+            params["$skiptoken"] = skip_token
         
         # Add status filter
         if status == TaskStatusFilter.COMPLETED:
@@ -240,12 +260,16 @@ class GraphAPIClient:
             params["$filter"] = "status ne 'completed'"
         # For 'all', no filter needed
         
-        response = self._make_request("GET", endpoint, params=params)
+        response = await self._make_request("GET", endpoint, params=params)
         tasks_data = response.get('value', [])
         
-        return [Task(task_data) for task_data in tasks_data]
+        return {
+            'value': [Task(task_data) for task_data in tasks_data],
+            'nextLink': response.get('@odata.nextLink'),
+            'count': len(tasks_data)
+        }
     
-    def get_task(self, task_id: str, list_id: str) -> Task:
+    async def get_task(self, task_id: str, list_id: str) -> Task:
         """
         Get a specific task
         
@@ -257,10 +281,10 @@ class GraphAPIClient:
             Task object
         """
         endpoint = f"/me/todo/lists/{list_id}/tasks/{task_id}"
-        response = self._make_request("GET", endpoint)
+        response = await self._make_request("GET", endpoint)
         return Task(response)
     
-    def create_task(
+    async def create_task(
         self,
         title: str,
         list_id: str,
@@ -295,10 +319,10 @@ class GraphAPIClient:
                 'timeZone': 'UTC'
             }
         
-        response = self._make_request("POST", endpoint, data=data)
+        response = await self._make_request("POST", endpoint, data=data)
         return Task(response)
     
-    def update_task(self, task_id: str, list_id: str, **kwargs) -> Task:
+    async def update_task(self, task_id: str, list_id: str, **kwargs) -> Task:
         """
         Update a task
         
@@ -330,10 +354,10 @@ class GraphAPIClient:
         if 'reminderDateTime' in kwargs:
             data['reminderDateTime'] = kwargs['reminderDateTime']
         
-        response = self._make_request("PATCH", endpoint, data=data)
+        response = await self._make_request("PATCH", endpoint, data=data)
         return Task(response)
     
-    def delete_task(self, task_id: str, list_id: str) -> None:
+    async def delete_task(self, task_id: str, list_id: str) -> None:
         """
         Delete a task
         
@@ -342,4 +366,4 @@ class GraphAPIClient:
             list_id: Task list ID
         """
         endpoint = f"/me/todo/lists/{list_id}/tasks/{task_id}"
-        self._make_request("DELETE", endpoint)
+        await self._make_request("DELETE", endpoint)

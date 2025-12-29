@@ -8,8 +8,11 @@
 ✅ **Token 自动刷新** - 自动管理和刷新访问令牌  
 ✅ **Token 持久化** - 令牌存储在 Docker Volume 中，容器重启后仍然有效  
 ✅ **API Key 保护** - 可选的 API 密钥认证保护业务端点  
-✅ **自定义 API 前缀** - 支持通过环境变量设置基础路径  
+✅ **自定义 API 前缀** - 支持通过环境变量设置基础路径，自动标准化格式  
 ✅ **完整的 To Do API** - 任务列表和任务的 CRUD 操作  
+✅ **分页支持** - 支持 @odata.nextLink 分页，处理大量数据  
+✅ **异步高性能** - 使用 httpx.AsyncClient 实现真正的异步 HTTP 请求  
+✅ **改进的错误处理** - 准确的 HTTP 状态码，不依赖字符串匹配  
 ✅ **Docker 容器化** - 使用非 root 用户运行，提高安全性  
 ✅ **健康检查** - 内置健康检查端点和 Docker 健康监控  
 
@@ -117,9 +120,30 @@ POST /auth/logout
 
 ### 任务列表端点
 
-#### 获取所有列表
+#### 获取所有列表（支持分页）
 ```bash
-GET /lists?limit=99
+GET /lists?limit=99&skip_token={token}
+```
+
+参数：
+- `limit`: 最大返回数量（默认: 99）
+- `skip_token`: 分页令牌（从上一页的 `nextLink` 中提取）
+
+响应：
+```json
+{
+  "value": [
+    {
+      "list_id": "...",
+      "displayName": "我的列表",
+      "isOwner": true,
+      "isShared": false,
+      "wellknownListName": null
+    }
+  ],
+  "nextLink": "https://graph.microsoft.com/...", // 可选，当有更多数据时返回
+  "count": 50
+}
 ```
 
 #### 创建列表
@@ -154,14 +178,32 @@ DELETE /lists/{list_id}
 
 ### 任务端点
 
-#### 获取列表中的任务
+#### 获取列表中的任务（支持分页）
 ```bash
-GET /lists/{list_id}/tasks?status=notCompleted&limit=1000
+GET /lists/{list_id}/tasks?status=notCompleted&limit=1000&skip_token={token}
 ```
 
 参数：
 - `status`: `completed` | `notCompleted` | `all` (默认: notCompleted)
 - `limit`: 最大返回数量（默认: 1000）
+- `skip_token`: 分页令牌（从上一页的 `nextLink` 中提取）
+
+响应：
+```json
+{
+  "value": [
+    {
+      "task_id": "...",
+      "title": "任务标题",
+      "status": "notStarted",
+      "importance": "normal",
+      ...
+    }
+  ],
+  "nextLink": "https://graph.microsoft.com/...", // 可选，当有更多数据时返回
+  "count": 1000
+}
+```
 
 #### 创建任务
 ```bash
@@ -324,6 +366,7 @@ PORT=8080
 - **FastAPI** - 现代的高性能 Web 框架
 - **MSAL** - Microsoft Authentication Library
 - **Microsoft Graph API** - Microsoft To Do API 客户端
+- **httpx** - 现代的异步 HTTP 客户端
 - **Uvicorn** - ASGI 服务器
 - **Pydantic** - 数据验证和设置管理
 - **Docker** - 容器化部署
@@ -347,9 +390,19 @@ export CLIENT_ID=your_client_id
 export CLIENT_SECRET=your_client_secret
 export GRAPH_API_VERSION=beta
 
+# 开发环境可选：允许 HTTP OAuth（仅用于开发，生产环境不要使用）
+export OAUTHLIB_INSECURE_TRANSPORT=1
+export OAUTHLIB_RELAX_TOKEN_SCOPE=1
+export OAUTHLIB_IGNORE_SCOPE_CHANGE=1
+
 # 运行服务
 python -m uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 ```
+
+**重要说明**：
+- OAUTHLIB 环境变量仅在开发环境使用，用于允许 HTTP 协议进行 OAuth
+- 生产环境必须使用 HTTPS，不要设置这些变量
+- 这些变量不再被代码强制设置，完全由环境控制
 
 ## 许可证
 

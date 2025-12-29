@@ -5,11 +5,6 @@ import os
 from pathlib import Path
 from typing import Optional
 
-# 允许 HTTP 传输（仅用于开发环境）
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
-os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
-os.environ['OAUTHLIB_IGNORE_SCOPE_CHANGE'] = '1'
-
 
 class Settings:
     """Application settings loaded from environment variables"""
@@ -26,7 +21,7 @@ class Settings:
             self.graph_api_version = "beta"
         
         # API Configuration
-        self.api_prefix: str = os.getenv("API_PREFIX", "")
+        self.api_prefix: str = self._normalize_api_prefix(os.getenv("API_PREFIX", ""))
         self.enable_api_key: bool = os.getenv("ENABLE_API_KEY", "false").lower() == "true"
         self.x_api_key: str = os.getenv("X_API_KEY", "")
         
@@ -42,6 +37,22 @@ class Settings:
         # HTML Rendering Configuration
         self.enable_query_auth: bool = os.getenv("ENABLE_QUERY_AUTH", "false").lower() == "true"
         self.query_passwd: str = os.getenv("QUERY_PASSWD", "")
+    
+    def _normalize_api_prefix(self, prefix: str) -> str:
+        """
+        Normalize API prefix to ensure consistent format:
+        - Remove leading/trailing slashes
+        - Add leading slash if prefix is not empty
+        - Return empty string if prefix is empty
+        """
+        if not prefix:
+            return ""
+        # Remove leading and trailing slashes
+        prefix = prefix.strip().strip('/')
+        if not prefix:
+            return ""
+        # Add leading slash
+        return f"/{prefix}"
         
     def validate(self) -> bool:
         """Validate required settings"""

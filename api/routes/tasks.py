@@ -7,7 +7,7 @@ from datetime import datetime
 import logging
 
 from ..graph_client import GraphAPIClient, GraphAPIError, TaskStatusFilter, GRAPH_API_DATETIME_FORMAT
-from ..models import TaskCreate, TaskUpdate, TaskResponse, TaskStatusUpdate
+from ..models import TaskCreate, TaskUpdate, TaskResponse, TaskStatusUpdate, PaginatedTaskResponse
 from ..dependencies import get_todo_client
 
 logger = logging.getLogger(__name__)
@@ -52,13 +52,13 @@ async def get_task(
         Task details
     """
     try:
-        task = client.get_task(task_id=task_id, list_id=list_id)
+        task = await client.get_task(task_id=task_id, list_id=list_id)
         return task_to_response(task)
     except GraphAPIError as e:
         logger.error(f"Failed to get task {task_id}: {e}")
         raise HTTPException(
-            status_code=404 if "404" in str(e) else 500,
-            detail=f"Failed to get task: {str(e)}"
+            status_code=e.status_code,
+            detail=e.message
         )
 
 
@@ -104,13 +104,13 @@ async def update_task(
             else:
                 update_dict[key] = value
         
-        updated_task = client.update_task(task_id=task_id, list_id=list_id, **update_dict)
+        updated_task = await client.update_task(task_id=task_id, list_id=list_id, **update_dict)
         return task_to_response(updated_task)
     except GraphAPIError as e:
         logger.error(f"Failed to update task {task_id}: {e}")
         raise HTTPException(
-            status_code=404 if "404" in str(e) else 500,
-            detail=f"Failed to update task: {str(e)}"
+            status_code=e.status_code,
+            detail=e.message
         )
 
 
@@ -128,13 +128,13 @@ async def delete_task(
         list_id: Task list ID
     """
     try:
-        client.delete_task(task_id=task_id, list_id=list_id)
+        await client.delete_task(task_id=task_id, list_id=list_id)
         return None
     except GraphAPIError as e:
         logger.error(f"Failed to delete task {task_id}: {e}")
         raise HTTPException(
-            status_code=404 if "404" in str(e) else 500,
-            detail=f"Failed to delete task: {str(e)}"
+            status_code=e.status_code,
+            detail=e.message
         )
 
 
@@ -143,23 +143,25 @@ from fastapi import APIRouter as _APIRouter
 lists_tasks_router = _APIRouter()
 
 
-@lists_tasks_router.get("/{list_id}/tasks", response_model=List[TaskResponse])
+@lists_tasks_router.get("/{list_id}/tasks", response_model=PaginatedTaskResponse)
 async def get_list_tasks(
     list_id: str,
     status: Optional[str] = Query('notCompleted', description="Filter by status: completed, notCompleted, or all"),
     limit: int = Query(1000, description="Maximum number of tasks to return"),
+    skip_token: Optional[str] = Query(None, description="Pagination token for next page"),
     client: GraphAPIClient = Depends(get_todo_client)
 ):
     """
-    Get all tasks in a task list
+    Get all tasks in a task list with pagination support
     
     Args:
         list_id: Task list ID
         status: Filter by status (completed, notCompleted, all)
         limit: Maximum number of tasks to return
+        skip_token: Pagination token for fetching next page
         
     Returns:
-        List of tasks
+        Paginated list of tasks
     """
     try:
         # Map status string to TaskStatusFilter
@@ -170,13 +172,17 @@ async def get_list_tasks(
         }
         status_filter = status_filter_map.get(status, TaskStatusFilter.NOT_COMPLETED)
         
-        tasks = client.get_tasks(list_id=list_id, limit=limit, status=status_filter)
-        return [task_to_response(task) for task in tasks]
+        result = await client.get_tasks(list_id=list_id, limit=limit, status=status_filter, skip_token=skip_token)
+        return PaginatedTaskResponse(
+            value=[task_to_response(task) for task in result['value']],
+            nextLink=result.get('nextLink'),
+            count=result['count']
+        )
     except GraphAPIError as e:
         logger.error(f"Failed to get tasks for list {list_id}: {e}")
         raise HTTPException(
-            status_code=404 if "404" in str(e) else 500,
-            detail=f"Failed to get tasks: {str(e)}"
+            status_code=e.status_code,
+            detail=e.message
         )
 
 
@@ -203,7 +209,7 @@ async def create_task(
             due_date = datetime.fromisoformat(task_data.dueDateTime.replace('Z', '+00:00'))
         
         # Create basic task
-        new_task = client.create_task(
+        new_task = await client.create_task(
             title=task_data.title,
             list_id=list_id,
             due_date=due_date,
@@ -226,7 +232,7 @@ async def create_task(
             update_dict['categories'] = task_data.categories
         
         if update_dict:
-            new_task = client.update_task(
+            new_task = await client.update_task(
                 task_id=new_task.task_id,
                 list_id=list_id,
                 **update_dict
@@ -236,6 +242,6 @@ async def create_task(
     except GraphAPIError as e:
         logger.error(f"Failed to create task in list {list_id}: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to create task: {str(e)}"
+            status_code=e.status_code,
+            detail=e.message
         )
