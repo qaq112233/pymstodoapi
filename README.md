@@ -101,25 +101,37 @@ api/
 - [SOLUTION.md](SOLUTION.md) - 技术方案说明
 - [CODE_REVIEW.md](CODE_REVIEW.md) - 代码审查和改进建议
 - [CONTRIBUTING.md](CONTRIBUTING.md) - 贡献指南
+- [SECURITY.md](SECURITY.md) - 安全最佳实践
 
 ## 开发
 
-### 本地开发设置
+### 快速开始
 
 ```bash
-# 安装开发依赖
-pip install -r api_requirements.txt
-pip install pytest pytest-cov black isort flake8 pre-commit
+# 克隆仓库
+git clone https://github.com/qaq112233/pymstodoapi.git
+cd pymstodoapi
 
-# 设置 pre-commit hooks
-pre-commit install
+# 安装依赖
+make install-dev
 
 # 运行测试
-pytest --cov=api
+make test
 
-# 代码格式化
-black api/
-isort api/
+# 启动开发服务器
+make dev
+```
+
+### 常用命令
+
+```bash
+make help          # 显示所有可用命令
+make test          # 运行测试
+make test-cov      # 运行测试并生成覆盖率报告
+make format        # 格式化代码
+make lint          # 运行代码检查
+make security      # 运行安全扫描
+make docker-build  # 构建 Docker 镜像
 ```
 
 详细的开发指南请参阅 [CONTRIBUTING.md](CONTRIBUTING.md)。
