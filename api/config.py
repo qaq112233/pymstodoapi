@@ -56,14 +56,33 @@ class Settings:
         
     def validate(self) -> bool:
         """Validate required settings"""
+        errors = []
+        
         if not self.client_id or not self.client_secret:
-            raise ValueError("CLIENT_ID and CLIENT_SECRET must be set")
+            errors.append("CLIENT_ID and CLIENT_SECRET must be set")
         
-        if self.enable_api_key and not self.x_api_key:
-            raise ValueError("X_API_KEY must be set when ENABLE_API_KEY is true")
+        # Validate client_id format (should be a GUID)
+        if self.client_id and len(self.client_id) < 32:
+            errors.append("CLIENT_ID appears to be invalid (too short)")
         
-        if self.enable_query_auth and not self.query_passwd:
-            raise ValueError("QUERY_PASSWD must be set when ENABLE_QUERY_AUTH is true")
+        # Validate client_secret (should be reasonably long)
+        if self.client_secret and len(self.client_secret) < 10:
+            errors.append("CLIENT_SECRET appears to be invalid (too short)")
+        
+        if self.enable_api_key:
+            if not self.x_api_key:
+                errors.append("X_API_KEY must be set when ENABLE_API_KEY is true")
+            elif len(self.x_api_key) < 16:
+                errors.append("X_API_KEY is too short (minimum 16 characters recommended)")
+        
+        if self.enable_query_auth:
+            if not self.query_passwd:
+                errors.append("QUERY_PASSWD must be set when ENABLE_QUERY_AUTH is true")
+            elif len(self.query_passwd) < 8:
+                errors.append("QUERY_PASSWD is too short (minimum 8 characters recommended)")
+        
+        if errors:
+            raise ValueError("Configuration validation failed:\n  - " + "\n  - ".join(errors))
         
         return True
 

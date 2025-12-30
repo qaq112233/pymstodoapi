@@ -3,6 +3,7 @@ Dependency injection for FastAPI routes
 """
 from fastapi import Header, HTTPException, Request
 from typing import Optional
+import secrets
 
 from .graph_client import GraphAPIClient
 from .config import settings
@@ -11,7 +12,7 @@ from .auth import AuthManager
 
 async def verify_api_key(x_api_key: Optional[str] = Header(None, alias="X-API-KEY")) -> None:
     """
-    Verify API key if enabled
+    Verify API key if enabled using constant-time comparison
     
     Args:
         x_api_key: API key from request header (X-API-KEY)
@@ -28,7 +29,8 @@ async def verify_api_key(x_api_key: Optional[str] = Header(None, alias="X-API-KE
             detail="Missing X-API-KEY header"
         )
     
-    if x_api_key != settings.x_api_key:
+    # Use constant-time comparison to prevent timing attacks
+    if not secrets.compare_digest(x_api_key, settings.x_api_key):
         raise HTTPException(
             status_code=403,
             detail="Invalid API key"

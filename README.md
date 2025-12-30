@@ -77,6 +77,11 @@ api/
 - ✅ 非root用户运行（安全）
 - ✅ 健康检查
 - ✅ API密钥保护（可选）
+- ✅ 安全响应头
+- ✅ 速率限制保护
+- ✅ 输入验证和 XSS 防护
+- ✅ 完整的 CI/CD 流水线
+- ✅ 自动化测试
 
 ## 镜像优化
 
@@ -94,6 +99,30 @@ api/
 - [DEPLOYMENT.md](DEPLOYMENT.md) - 生产部署指南
 - [README_API.md](README_API.md) - 完整API文档
 - [SOLUTION.md](SOLUTION.md) - 技术方案说明
+- [CODE_REVIEW.md](CODE_REVIEW.md) - 代码审查和改进建议
+- [CONTRIBUTING.md](CONTRIBUTING.md) - 贡献指南
+
+## 开发
+
+### 本地开发设置
+
+```bash
+# 安装开发依赖
+pip install -r api_requirements.txt
+pip install pytest pytest-cov black isort flake8 pre-commit
+
+# 设置 pre-commit hooks
+pre-commit install
+
+# 运行测试
+pytest --cov=api
+
+# 代码格式化
+black api/
+isort api/
+```
+
+详细的开发指南请参阅 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## Azure应用配置
 

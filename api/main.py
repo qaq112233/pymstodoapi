@@ -8,12 +8,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
 from typing import Optional
+import os
 
 from .config import settings
 from .auth import AuthManager
 from .routes import auth_router, lists_router, tasks_router, html_router
 from .dependencies import verify_api_key, get_todo_client
 from .models import ErrorResponse
+from .middleware import SecurityHeadersMiddleware, RateLimitMiddleware
 
 # Configure logging
 logging.basicConfig(
@@ -65,6 +67,13 @@ app = FastAPI(
     redoc_url=None,  # Disable default redoc
     openapi_url=None,  # Disable default openapi
 )
+
+# Add security middleware
+app.add_middleware(SecurityHeadersMiddleware)
+
+# Add rate limiting (configurable via environment variable)
+rate_limit = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
+app.add_middleware(RateLimitMiddleware, requests_per_minute=rate_limit)
 
 
 # Global exception handler

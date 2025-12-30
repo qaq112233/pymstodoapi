@@ -36,12 +36,24 @@ class TokenResponse(BaseModel):
 # Task List Models
 class TaskListCreate(BaseModel):
     """Create task list request"""
-    displayName: str = Field(..., min_length=1, max_length=255, description="Name of the task list")
+    displayName: str = Field(
+        ..., 
+        min_length=1, 
+        max_length=255, 
+        description="Name of the task list",
+        pattern=r'^[^<>\"\'&]*$'  # Prevent XSS characters
+    )
 
 
 class TaskListUpdate(BaseModel):
     """Update task list request"""
-    displayName: Optional[str] = Field(None, min_length=1, max_length=255, description="Name of the task list")
+    displayName: Optional[str] = Field(
+        None, 
+        min_length=1, 
+        max_length=255, 
+        description="Name of the task list",
+        pattern=r'^[^<>\"\'&]*$'  # Prevent XSS characters
+    )
 
 
 class TaskListResponse(BaseModel):
@@ -75,19 +87,31 @@ class TaskBody(BaseModel):
 
 class TaskCreate(BaseModel):
     """Create task request"""
-    title: str = Field(..., min_length=1, max_length=255, description="Task title")
-    body: Optional[str] = Field(None, description="Task body content")
+    title: str = Field(
+        ..., 
+        min_length=1, 
+        max_length=255, 
+        description="Task title",
+        pattern=r'^[^<>\"\']*$'  # Prevent XSS characters
+    )
+    body: Optional[str] = Field(None, max_length=10000, description="Task body content")
     dueDateTime: Optional[str] = Field(None, description="Due date in ISO 8601 format")
     reminderDateTime: Optional[str] = Field(None, description="Reminder date in ISO 8601 format")
     importance: Optional[Literal['low', 'normal', 'high']] = Field('normal', description="Task importance")
     isReminderOn: Optional[bool] = Field(False, description="Enable reminder")
-    categories: Optional[List[str]] = Field(None, description="Task categories")
+    categories: Optional[List[str]] = Field(None, max_length=10, description="Task categories (max 10)")
 
 
 class TaskUpdate(BaseModel):
     """Update task request"""
-    title: Optional[str] = Field(None, min_length=1, max_length=255, description="Task title")
-    body: Optional[str] = Field(None, description="Task body content")
+    title: Optional[str] = Field(
+        None, 
+        min_length=1, 
+        max_length=255, 
+        description="Task title",
+        pattern=r'^[^<>\"\']*$'  # Prevent XSS characters
+    )
+    body: Optional[str] = Field(None, max_length=10000, description="Task body content")
     status: Optional[Literal['notStarted', 'inProgress', 'completed', 'waitingOnOthers', 'deferred']] = Field(
         None, description="Task status"
     )
@@ -95,7 +119,7 @@ class TaskUpdate(BaseModel):
     isReminderOn: Optional[bool] = Field(None, description="Enable reminder")
     dueDateTime: Optional[str] = Field(None, description="Due date in ISO 8601 format")
     reminderDateTime: Optional[str] = Field(None, description="Reminder date in ISO 8601 format")
-    categories: Optional[List[str]] = Field(None, description="Task categories")
+    categories: Optional[List[str]] = Field(None, max_length=10, description="Task categories (max 10)")
 
 
 class TaskResponse(BaseModel):
