@@ -15,7 +15,7 @@ def app_with_api_key():
     app = FastAPI()
     
     @app.get("/protected")
-    async def protected_endpoint(api_key: None = Depends(verify_api_key)):
+    async def protected_endpoint(_: None = Depends(verify_api_key)):
         return {"message": "protected"}
     
     return app

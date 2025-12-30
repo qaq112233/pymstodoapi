@@ -41,7 +41,7 @@ class TaskListCreate(BaseModel):
         min_length=1, 
         max_length=255, 
         description="Name of the task list",
-        pattern=r'^[^<>\"\'&]*$'  # Prevent XSS characters
+        pattern=r'^[^<>"\'&]*$'  # Prevent XSS characters
     )
 
 
@@ -52,7 +52,7 @@ class TaskListUpdate(BaseModel):
         min_length=1, 
         max_length=255, 
         description="Name of the task list",
-        pattern=r'^[^<>\"\'&]*$'  # Prevent XSS characters
+        pattern=r'^[^<>"\'&]*$'  # Prevent XSS characters
     )
 
 
@@ -92,7 +92,7 @@ class TaskCreate(BaseModel):
         min_length=1, 
         max_length=255, 
         description="Task title",
-        pattern=r'^[^<>\"\']*$'  # Prevent XSS characters
+        pattern=r'^[^<>"\']*$'  # Prevent XSS characters
     )
     body: Optional[str] = Field(None, max_length=10000, description="Task body content")
     dueDateTime: Optional[str] = Field(None, description="Due date in ISO 8601 format")
@@ -109,7 +109,7 @@ class TaskUpdate(BaseModel):
         min_length=1, 
         max_length=255, 
         description="Task title",
-        pattern=r'^[^<>\"\']*$'  # Prevent XSS characters
+        pattern=r'^[^<>"\']*$'  # Prevent XSS characters
     )
     body: Optional[str] = Field(None, max_length=10000, description="Task body content")
     status: Optional[Literal['notStarted', 'inProgress', 'completed', 'waitingOnOthers', 'deferred']] = Field(
