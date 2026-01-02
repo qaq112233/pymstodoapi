@@ -72,10 +72,12 @@
 4. 选择 "Delegated permissions"
 5. 搜索并添加以下权限:
    - `Tasks.ReadWrite` - 读写用户任务
-   - `offline_access` - 获取刷新令牌
-   - `openid` - OpenID Connect 登录
+   - `Tasks.ReadWrite.Shared` - 读写共享任务
+   - `User.Read` - 读取用户基本信息
 6. 点击 "Add permissions"
 7. 点击 "Grant admin consent for [Your Organization]" (如果可用)
+
+**注意**: 不需要手动添加 `offline_access`、`openid`、`profile` 等权限，MSAL 会自动处理这些保留作用域。
 
 ### 完成
 

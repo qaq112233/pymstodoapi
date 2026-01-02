@@ -2,7 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased] - 2024-12-28
+## [1.0.1] - 2026-01-02
+
+### Fixed
+- **MSAL Reserved Scope Error**: Removed `offline_access` from SCOPES list in `api/auth.py`
+  - MSAL automatically handles reserved scopes (`offline_access`, `openid`, `profile`)
+  - Fixed error: "You cannot use any scope value that is reserved"
+  - The `/auth/login` endpoint now works correctly
+
+### Removed
+- Outdated documentation files that were no longer relevant:
+  - `IMPLEMENTATION_SUMMARY.md` - Described old improvements
+  - `MIGRATION_SUMMARY.md` - Described completed migration from pymstodo
+  - `SOLUTION.md` - Described old OAuth HTTPS errors
+  - `OPTIMIZATION.md` - Described old optimization process
+
+## [1.0.0] - 2024-12-28
 
 ### Added
 - **Pagination Support**: Implemented pagination for both task lists and tasks using `@odata.nextLink`
