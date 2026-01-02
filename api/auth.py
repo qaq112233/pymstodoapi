@@ -17,11 +17,11 @@ class AuthManager:
     """Manages OAuth authentication and token lifecycle using MSAL"""
     
     # Microsoft Graph API scopes for To Do
+    # Note: offline_access is automatically added by MSAL and should not be explicitly included
     SCOPES = [
         "Tasks.ReadWrite",
         "Tasks.ReadWrite.Shared",
-        "User.Read",
-        "offline_access"
+        "User.Read"
     ]
     
     # OAuth authority endpoint
